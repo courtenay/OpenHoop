@@ -29,8 +29,9 @@ public:
 
     /**
      * @brief Initializes and advertises the BLE service.
+     * @return True if the BLE stack started advertising successfully, otherwise false.
      */
-    void beginAndAdvertise();
+    bool beginAndAdvertise();
 
     /**
      * @brief Updates the battery level characteristic.
@@ -41,6 +42,13 @@ public:
     BLEByteCharacteristic effectCharacteristic;  ///< Effect characteristic for BLE.
     BLEStringCharacteristic solidColorCharacteristic;  ///< Solid color characteristic for BLE.
     BLEByteCharacteristic energySavingModeCharacteristic;  ///< Energy-saving mode characteristic.
+
+    /**
+     * @brief Resets controllable characteristics to their default values.
+     */
+    void resetControlCharacteristics();
+
+    static constexpr uint8_t SOLID_COLOR_VALUE_SIZE = 8;  ///< Length reserved for the solid color payload.
 
 private:
     BLEService hulaHoopService;  ///< Hula Hoop service for BLE.
