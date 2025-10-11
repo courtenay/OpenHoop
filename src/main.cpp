@@ -15,12 +15,42 @@
 #include "../include/utils/EffectUtils.h"
 #include "../include/Config.h"
 
+namespace {
+constexpr unsigned long kBatteryUpdateIntervalMs = 1000UL;
+constexpr uint8_t kBatterySampleCount = BATTERY_SAMPLE_COUNT;
+constexpr float kAdcToVoltage = REF_VOLTAGE / BATTERY_MAX_READING;
+constexpr float kVoltageDividerRatio = (R1 + R2) / R2;
+constexpr uint8_t kMaxEnergySavingLevel = ENERGY_SAVING_MAX_LEVEL;
+constexpr uint8_t kColorBufferSize = BleService::SOLID_COLOR_VALUE_SIZE + 1;
+
+unsigned long lastBatteryUpdateMs = 0;
+bool isCentralConnected = false;
+
+constexpr bool isValidEffect(uint8_t effectValue) {
+    return (effectValue <= static_cast<uint8_t>(EffectType::MUSHROOM)) ||
+           (effectValue == static_cast<uint8_t>(EffectType::PULSE)) ||
+           (effectValue == static_cast<uint8_t>(EffectType::SPECTRUM));
+}
+
+uint8_t clampEnergySavingLevel(uint8_t level) {
+    return level > kMaxEnergySavingLevel ? kMaxEnergySavingLevel : level;
+}
+} // namespace
+
 HulaHoopDotStar hoop(NUM_LEDS, LEDS_DATA_PIN, LEDS_CLOCK_PIN);
 
 BleService bleService;
 std::unique_ptr<EffectService> effectService = std::make_unique<EffectService>();
 
 void setup() {
+    Serial.begin(115200);
+    unsigned long serialStart = millis();
+    while (!Serial && (millis() - serialStart) < 2000UL) {
+        delay(10);
+    }
+
+    analogReadResolution(ANALOG_READ_RESOLUTION_BITS);
+
     // Initialize the PDM library for sound processing
     PDM.onReceive(EffectUtils::onPDMdata);
 
@@ -29,7 +59,13 @@ void setup() {
     hoop.show();
 
     // Initialize DotStar BLE services
-    bleService.beginAndAdvertise();
+    if (!bleService.beginAndAdvertise()) {
+        while (true) {
+            delay(1000);
+        }
+    }
+
+    lastBatteryUpdateMs = millis() - kBatteryUpdateIntervalMs;
 }
 
 /**
@@ -37,29 +73,45 @@ void setup() {
  * Handles color code writes, gesture commands, and energy-saving mode changes.
  */
 void updateBLE() {
+    BLE.poll();
+
     BLEDevice central = BLE.central();
-    // Check for color code writes
-    if (bleService.solidColorCharacteristic.written()) {
-        String colorString = bleService.solidColorCharacteristic.value();
-        effectService->dispatchSolidColorCommand(colorString);
-        Serial.print("Color Command Received: ");
-        Serial.println(colorString);
-        bleService.effectCharacteristic.writeValue(-1);
-    }
+    if (central && central.connected()) {
+        if (!isCentralConnected) {
+            isCentralConnected = true;
+        }
 
-    // Check for gesture commands
-    if (bleService.effectCharacteristic.written()) {
-        auto gesture = static_cast<EffectType>(bleService.effectCharacteristic.value());
-        effectService->dispatchEffectCommand(gesture);
-        Serial.print("Effect Command Received: ");
-        Serial.println(static_cast<int>(gesture));
-        bleService.solidColorCharacteristic.writeValue("NO COLOR");
-    }
+        if (bleService.solidColorCharacteristic.written()) {
+            char colorBuffer[kColorBufferSize] = {};
+            const int length = bleService.solidColorCharacteristic.readValue(colorBuffer, BleService::SOLID_COLOR_VALUE_SIZE);
+            if (length > 0) {
+                colorBuffer[length < BleService::SOLID_COLOR_VALUE_SIZE ? length : BleService::SOLID_COLOR_VALUE_SIZE] = '\0';
+                effectService->dispatchSolidColorCommand(String(colorBuffer));
+                bleService.effectCharacteristic.writeValue(DEFAULT_EFFECT_VALUE);
+            }
+        }
 
-    // Check for energy-saving mode writes
-    if (bleService.energySavingModeCharacteristic.written()) {
-        uint8_t energySavingMode = bleService.energySavingModeCharacteristic.value();
-        hoop.setEnergySavingMode(energySavingMode);
+        if (bleService.effectCharacteristic.written()) {
+            const uint8_t effectValue = bleService.effectCharacteristic.value();
+            if (isValidEffect(effectValue)) {
+                effectService->dispatchEffectCommand(static_cast<EffectType>(effectValue));
+                bleService.solidColorCharacteristic.writeValue(SOLID_COLOR_DEFAULT_VALUE);
+            }
+        }
+
+        if (bleService.energySavingModeCharacteristic.written()) {
+            const uint8_t requestedMode = bleService.energySavingModeCharacteristic.value();
+            const uint8_t clampedMode = clampEnergySavingLevel(requestedMode);
+            hoop.setEnergySavingMode(clampedMode);
+            if (clampedMode != requestedMode) {
+                bleService.energySavingModeCharacteristic.writeValue(clampedMode);
+            }
+        }
+    } else if (isCentralConnected) {
+        bleService.resetControlCharacteristics();
+        hoop.setEnergySavingMode(DEFAULT_ENERGY_SAVING_MODE);
+        BLE.advertise();
+        isCentralConnected = false;
     }
 }
 
@@ -67,9 +119,22 @@ void updateBLE() {
  * @brief Update battery level based on the analog reading.
  */
 void updateBatteryLevel() {
-    int adcValue = analogRead(BATTERY_ANALOG_PIN);
-    auto adcVoltage = static_cast<float>((adcValue * REF_VOLTAGE) / BATTERY_MAX_READING);
-    auto batteryVoltage = static_cast<float>(adcVoltage * (R1 + R2) / R2);
+    const unsigned long now = millis();
+    if ((now - lastBatteryUpdateMs) < kBatteryUpdateIntervalMs) {
+        return;
+    }
+    lastBatteryUpdateMs = now;
+
+    uint32_t accumulatedReading = 0;
+    for (uint8_t sample = 0; sample < kBatterySampleCount; ++sample) {
+        accumulatedReading += static_cast<uint32_t>(analogRead(BATTERY_ANALOG_PIN));
+        delayMicroseconds(50);
+    }
+
+    const float averageReading = static_cast<float>(accumulatedReading) / kBatterySampleCount;
+    const float adcVoltage = averageReading * kAdcToVoltage;
+    const float batteryVoltage = adcVoltage * kVoltageDividerRatio;
+
     bleService.updateBatteryLevel(batteryVoltage);
 }
 

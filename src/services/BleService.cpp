@@ -27,7 +27,7 @@ BleService::BleService():
         batteryService("180F"),
         batteryLevelCharacteristic("2A19", BLERead | BLENotify),
         effectCharacteristic(EFFECT_SERVICE_UUID, BLERead | BLEWrite),
-        solidColorCharacteristic(SCOLOR_SERVICE_UUID, BLERead | BLEWrite, 8),
+        solidColorCharacteristic(SCOLOR_SERVICE_UUID, BLERead | BLEWrite, SOLID_COLOR_VALUE_SIZE),
         energySavingModeCharacteristic(ENERGY_SERVICE_UUID, BLERead | BLEWrite),
         hulaHoopService("1812"),
         reportDescriptor("2908", "04 0B 00 0B 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
@@ -43,12 +43,14 @@ BleService::BleService():
 /**
  * @brief Begin BLE communication and advertise the HulaHoop device.
  */
-void BleService::beginAndAdvertise() {
-    // BLE setup
-    BLE.begin();
+bool BleService::beginAndAdvertise() {
+    if (!BLE.begin()) {
+        return false;
+    }
+
     BLE.setDeviceName(MANUFACTURER_CHARACTERISTIC);
     BLE.setLocalName(MODEL_CHARACTERISTIC);
-    BLE.setAppearance(0x04C0);
+    BLE.setAppearance(BLE_DEVICE_APPEARANCE);
     BLE.setAdvertisedService(hulaHoopService);
 
     // Configure Report Map
@@ -62,16 +64,16 @@ void BleService::beginAndAdvertise() {
             0x95, 0x01,       // Report Count (1)
             0x81, 0x02        // Input (Data, Variable, Absolute)
     };
-    for (unsigned char i : reportMap) {
-        reportMapCharacteristic.writeValue(i);
+    for (uint8_t value : reportMap) {
+        reportMapCharacteristic.writeValue(value);
     }
     hulaHoopService.addCharacteristic(reportMapCharacteristic);
     hulaHoopControlService.addCharacteristic(effectCharacteristic);
-    effectCharacteristic.writeValue(-1);
+    effectCharacteristic.writeValue(DEFAULT_EFFECT_VALUE);
     hulaHoopControlService.addCharacteristic(solidColorCharacteristic);
-    solidColorCharacteristic.writeValue("NO COLOR");
+    solidColorCharacteristic.writeValue(SOLID_COLOR_DEFAULT_VALUE);
     hulaHoopControlService.addCharacteristic(energySavingModeCharacteristic);
-    energySavingModeCharacteristic.writeValue(0);
+    energySavingModeCharacteristic.writeValue(DEFAULT_ENERGY_SAVING_MODE);
     deviceInformationService.addCharacteristic(pnpIdCharacteristic);
     deviceInformationService.addCharacteristic(manufacturerCharacteristic);
     deviceInformationService.addCharacteristic(modelCharacteristic);
@@ -98,8 +100,8 @@ void BleService::beginAndAdvertise() {
     BLE.addService(batteryService);
     BLE.addService(deviceInformationService);
 
-    BLE.setAdvertisingInterval(152);
-    BLE.advertise();
+    BLE.setAdvertisingInterval(BLE_ADVERTISING_INTERVAL);
+    return BLE.advertise();
 }
 
 /**
@@ -108,6 +110,20 @@ void BleService::beginAndAdvertise() {
  */
 void BleService::updateBatteryLevel(float voltage) {
     // Calculate the battery level and update the BLE characteristic
-    int batteryLevel = map(static_cast<long>(voltage * 100), static_cast<long>(BATTERY_MIN_VOLTAGE * 100), static_cast<long>(BATTERY_MAX_VOLTAGE * 100), 0, 100);
-    batteryLevelCharacteristic.writeValue(batteryLevel);
+    const float clampedVoltage = voltage < BATTERY_MIN_VOLTAGE ? BATTERY_MIN_VOLTAGE : (voltage > BATTERY_MAX_VOLTAGE ? BATTERY_MAX_VOLTAGE : voltage);
+    const float percent = (clampedVoltage - BATTERY_MIN_VOLTAGE) / (BATTERY_MAX_VOLTAGE - BATTERY_MIN_VOLTAGE);
+    const float boundedPercent = percent < 0.0f ? 0.0f : (percent > 1.0f ? 1.0f : percent);
+    const uint8_t batteryLevel = static_cast<uint8_t>((boundedPercent * 100.0f) + 0.5f);
+
+    static uint8_t lastReportedLevel = 0xFF;
+    if (batteryLevel != lastReportedLevel) {
+        batteryLevelCharacteristic.writeValue(batteryLevel);
+        lastReportedLevel = batteryLevel;
+    }
+}
+
+void BleService::resetControlCharacteristics() {
+    effectCharacteristic.writeValue(DEFAULT_EFFECT_VALUE);
+    solidColorCharacteristic.writeValue(SOLID_COLOR_DEFAULT_VALUE);
+    energySavingModeCharacteristic.writeValue(DEFAULT_ENERGY_SAVING_MODE);
 }
