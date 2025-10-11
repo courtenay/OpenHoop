@@ -137,6 +137,6 @@ We follow the Contributor Covenant to ensure a welcoming environment. By partici
 * Focus on what is best for the community.
 * Show empathy toward other community members.
 
-Unacceptable behavior includes harassment, trolling, unwelcome sexual attention, public or private harassment, or publishing others’ private information without permission. Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team at **hello@openhoop.dev**. Project maintainers will review all reports and take appropriate action.
+Unacceptable behavior includes harassment, trolling, unwelcome sexual attention, public or private harassment, or publishing others’ private information without permission. Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team at **openhoop@gmail.com**. Project maintainers will review all reports and take appropriate action.
 
 Let’s build something spectacular together — thank you for contributing!
