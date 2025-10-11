@@ -1,92 +1,142 @@
-# Contributing
+# Contributing to OpenHoop
 
-When contributing to this repository, please first discuss the change you wish to make via issue,
-email, or any other method with the owners of this repository before making a change.
+Thank you for your interest in contributing to OpenHoop! We’re building this project together — whether you’re a hardware tinkerer, software developer, or artist, your ideas matter.
 
-Please note we have a code of conduct, please follow it in all your interactions with the project.
+This guide is here to make contributing as smooth as possible. If anything is unclear, open an issue or start a discussion — we’re happy to help.
+
+---
+
+## How to Get Started
+
+1. **Explore the project**
+   * Read the [README](README.md) for an overview of the hardware and firmware.
+   * Browse open issues and discussions to see where help is needed most.
+2. **Pick a task**
+   * Comment on the issue you want to work on so others know it’s in progress.
+   * If your idea is new, open an issue to outline what you plan to build or fix.
+3. **Sync with the community**
+   * Join our chat (see the README for links) or start a GitHub Discussion if you would like feedback early.
+4. **Set up your environment** using the steps below, then start coding!
+
+---
+
+## Local Setup Guide
+
+### 1. PlatformIO Setup
+
+OpenHoop’s firmware is organized as a [PlatformIO](https://platformio.org/) project.
+
+1. Install PlatformIO:
+   * **VS Code Extension:** Install the “PlatformIO IDE” extension and restart VS Code.
+   * **CLI:** Run `pip install platformio` (or use the installer for your OS).
+2. Clone the repository and install dependencies:
+   ```bash
+   git clone https://github.com/<your-username>/OpenHoop.git
+   cd OpenHoop
+   pio run
+   ```
+   The first `pio run` downloads required frameworks and libraries.
+3. Build and upload:
+   * Build only: `pio run`
+   * Build & upload: `pio run -t upload`
+   * Monitor serial: `pio device monitor`
+
+### 2. Arduino IDE Setup (Optional)
+
+If you prefer the Arduino IDE:
+
+1. Install the Arduino IDE (1.8+ or 2.x).
+2. Add the appropriate board support package (see `platformio.ini` for board details).
+3. Install libraries listed in `lib/` and `platformio.ini` manually through the Library Manager if they are not bundled.
+4. Open the `src/` sketch files and ensure the board and port match your hoop controller.
+
+> **Tip:** PlatformIO provides automated dependency management and reproducible builds, so we recommend it for most contributors.
+
+### 3. Connecting to the Hoop & Viewing Serial Output
+
+1. Connect the hoop controller to your computer via USB.
+2. Identify the serial port:
+   * macOS/Linux: run `ls /dev/tty.*` or `ls /dev/ttyUSB*`.
+   * Windows: check the COM port in Device Manager.
+3. Start a serial monitor:
+   * PlatformIO: `pio device monitor`
+   * Arduino IDE: Tools → Serial Monitor (set the baud rate to match the firmware, typically `115200`).
+4. Reset the device (if needed) to view boot messages and runtime logs.
+
+---
+
+## Code Style Guidelines
+
+### General Principles
+
+* Favor clarity over cleverness — optimize for readability.
+* Keep functions focused. Break large routines into smaller helpers when they exceed ~100 lines.
+* Write unit or integration tests when practical (see the `test/` directory and PlatformIO docs).
+
+### Naming Conventions
+
+| Element              | Convention             | Example            |
+| -------------------- | ---------------------- | ------------------ |
+| C++ variables        | `snake_case`           | `led_brightness`   |
+| C++ functions        | `snake_case`           | `update_animation` |
+| C++ classes/structs  | `PascalCase`           | `AnimationFrame`   |
+| Constants/macros     | `ALL_CAPS`             | `MAX_LEDS`         |
+| File names           | `snake_case`           | `animation_driver.cpp` |
+
+### Formatting
+
+* **Indentation:** 2 spaces (no tabs) for C++ and Arduino code.
+* **Line length:** Aim for ≤100 characters where practical.
+* **Braces:** Place the opening brace on the same line as the control statement or function.
+* **Includes:** Group standard library headers, third-party headers, then project headers. Separate groups with a blank line.
+
+### Commenting (C++ / Arduino)
+
+* Use `//` for inline explanations and `/* ... */` only for block comments that span multiple lines.
+* Document non-obvious logic and hardware-specific assumptions.
+* Public functions should have a brief `///` Doxygen-style comment describing purpose, inputs, and outputs when they are part of a shared interface.
+
+---
+
+## Commit Message Guidelines
+
+Structured commits help reviewers understand your changes.
+
+* **Format:** `type(scope): short summary`
+  * Examples: `fix(animations): guard against empty frame list`, `docs: update contributing guide`.
+* **Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, or another short descriptor.
+* **Body (optional but encouraged):** Wrap at 72 characters, explain the motivation and key changes.
+* **Footer:** Reference related issues using `Fixes #123` or `Refs #456` when applicable.
+
+Commit early and often, but keep each commit focused on a single logical change.
+
+---
 
 ## Pull Request Process
 
-1. Ensure any install or build dependencies are removed before the end of the layer when doing a
-   build.
-2. Update the README.md with details of changes to the interface, this includes new environment
-   variables, exposed ports, useful file locations and container parameters.
-3. Increase the version numbers in any examples files and the README.md to the new version that this
-   Pull Request would represent. The versioning scheme we use is [SemVer](http://semver.org/).
-4. You may merge the Pull Request in once you have the sign-off of two other developers, or if you
-   do not have permission to do that, you may request the second reviewer to merge it for you.
+Use this checklist to keep PRs easy to review:
+
+- [ ] Ensure the branch is up to date with `main`.
+- [ ] Build the firmware (`pio run`) and run any relevant tests.
+- [ ] Update documentation, diagrams, or configuration files if the behavior changes.
+- [ ] Provide screenshots, serial logs, or videos when the change impacts user-visible behavior.
+- [ ] Fill out the PR template, summarizing what changed and why.
+- [ ] Request a review from a maintainer and respond to feedback promptly.
+
+Once approved, a maintainer will merge the PR. If you have merge permissions, wait for at least one approval before merging.
+
+---
 
 ## Code of Conduct
 
-### Our Pledge
+We follow the Contributor Covenant to ensure a welcoming environment. By participating in OpenHoop you agree to:
 
-In the interest of fostering an open and welcoming environment, we as
-contributors and maintainers pledge to making participation in our project and
-our community a harassment-free experience for everyone, regardless of age, body
-size, disability, ethnicity, gender identity and expression, level of experience,
-nationality, personal appearance, race, religion, or sexual identity and
-orientation.
+* Use welcoming and inclusive language.
+* Be respectful of differing viewpoints and experiences.
+* Accept constructive criticism gracefully.
+* Focus on what is best for the community.
+* Show empathy toward other community members.
 
-### Our Standards
+Unacceptable behavior includes harassment, trolling, unwelcome sexual attention, public or private harassment, or publishing others’ private information without permission. Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team at **hello@openhoop.dev**. Project maintainers will review all reports and take appropriate action.
 
-Examples of behavior that contributes to creating a positive environment
-include:
-
-* Using welcoming and inclusive language
-* Being respectful of differing viewpoints and experiences
-* Gracefully accepting constructive criticism
-* Focusing on what is best for the community
-* Showing empathy towards other community members
-
-Examples of unacceptable behavior by participants include:
-
-* The use of sexualized language or imagery and unwelcome sexual attention or
-  advances
-* Trolling, insulting/derogatory comments, and personal or political attacks
-* Public or private harassment
-* Publishing others' private information, such as a physical or electronic
-  address, without explicit permission
-* Other conduct which could reasonably be considered inappropriate in a
-  professional setting
-
-### Our Responsibilities
-
-Project maintainers are responsible for clarifying the standards of acceptable
-behavior and are expected to take appropriate and fair corrective action in
-response to any instances of unacceptable behavior.
-
-Project maintainers have the right and responsibility to remove, edit, or
-reject comments, commits, code, wiki edits, issues, and other contributions
-that are not aligned to this Code of Conduct, or to ban temporarily or
-permanently any contributor for other behaviors that they deem inappropriate,
-threatening, offensive, or harmful.
-
-### Scope
-
-This Code of Conduct applies both within project spaces and in public spaces
-when an individual is representing the project or its community. Examples of
-representing a project or community include using an official project e-mail
-address, posting via an official social media account, or acting as an appointed
-representative at an online or offline event. Representation of a project may be
-further defined and clarified by project maintainers.
-
-### Enforcement
-
-Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by contacting the project team at [INSERT EMAIL ADDRESS]. All
-complaints will be reviewed and investigated and will result in a response that
-is deemed necessary and appropriate to the circumstances. The project team is
-obligated to maintain confidentiality with regard to the reporter of an incident.
-Further details of specific enforcement policies may be posted separately.
-
-Project maintainers who do not follow or enforce the Code of Conduct in good
-faith may face temporary or permanent repercussions as determined by other
-members of the project's leadership.
-
-### Attribution
-
-This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 1.4,
-available at [http://contributor-covenant.org/version/1/4][version]
-
-[homepage]: http://contributor-covenant.org
-[version]: http://contributor-covenant.org/version/1/4/
+Let’s build something spectacular together — thank you for contributing!
