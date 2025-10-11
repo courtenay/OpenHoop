@@ -43,5 +43,5 @@ void SolidColorFillEffect::update() {
  * Turns off all LEDs on the display.
  */
 void SolidColorFillEffect::stop() {
-    hoop.fill(Adafruit_NeoPixel::Color(0, 0, 0));
+    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
 }

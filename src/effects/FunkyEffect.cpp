@@ -27,7 +27,7 @@ FunkyEffect::FunkyEffect() : time(0.0) {
  * @brief Initializes the Effect.
  */
 void FunkyEffect::start() {
-    hoop.fill(Adafruit_NeoPixel::Color(0, 0, 0));
+    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
 }
 
 /**
@@ -55,5 +55,5 @@ void FunkyEffect::update() {
  * Turns off all LEDs on the display.
  */
 void FunkyEffect::stop() {
-    hoop.fill(Adafruit_NeoPixel::Color(0, 0, 0));
+    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
 }

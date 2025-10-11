@@ -11,7 +11,7 @@
 #ifndef OPENHOOP_CONFIG_H
 #define OPENHOOP_CONFIG_H
 
-#include "utils/HulaHoopNeoPixel.h"
+#include "utils/HulaHoopDotStar.h"
 
 // Pin configuration for reading battery voltage.
 #define BATTERY_ANALOG_PIN 21  ///< Analog pin used for reading battery voltage.
@@ -24,7 +24,8 @@
 
 // LED configuration for the hoop.
 #define NUM_LEDS 288  ///< Number of LEDs in the hoop.
-#define LEDS_PIN 11  ///< Pin number to which the LEDs are connected.
+#define LEDS_DATA_PIN 11  ///< Data pin for the DotStar LED strip.
+#define LEDS_CLOCK_PIN 13 ///< Clock pin for the DotStar LED strip.
 
 // Bluetooth's configuration.
 #define EFFECT_SERVICE_UUID "0A92"  ///< UUID for the effect service.
@@ -35,7 +36,7 @@
 #define SERIAL_NUMBER_CHARACTERISTIC "HH-BLE-1"  ///< Serial number characteristic.
 #define FIRMWARE_CHARACTERISTIC "v1.0.0"  ///< Firmware version characteristic.
 
-// NeoPixel hoop object.
-extern HulaHoopNeoPixel hoop;  ///< Object representing the NeoPixel hoop.
+// DotStar hoop object.
+extern HulaHoopDotStar hoop;  ///< Object representing the DotStar hoop.
 
 #endif //OPENHOOP_CONFIG_H

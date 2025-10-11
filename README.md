@@ -13,7 +13,7 @@
 ## :hear_no_evil: What's all this about OpenHoop?
 
 **OpenHoop:** Revolutionizing smart hula hoop!
-Unleash your creativity and redefine hula hooping with OpenHoop! This open-source project seamlessly integrates cutting-edge technology with artistic expression. Design captivating LED effects and pixel art directly on your hula hoop, leveraging Adafruit NeoPixel LEDs and Bluetooth HID (Human Interface Device) protocol. With energy-saving features, OpenHoop fosters collaboration and innovation within the community. Join the OpenHoop movement today and redefine hula hooping!
+Unleash your creativity and redefine hula hooping with OpenHoop! This open-source project seamlessly integrates cutting-edge technology with artistic expression. Design captivating LED effects and pixel art directly on your hula hoop, leveraging Adafruit DotStar LEDs and Bluetooth HID (Human Interface Device) protocol. With energy-saving features, OpenHoop fosters collaboration and innovation within the community. Join the OpenHoop movement today and redefine hula hooping!
 
 ## :bulb: Features
 
@@ -32,7 +32,7 @@ Unleash your creativity and redefine hula hooping with OpenHoop! This open-sourc
 - 7.4V 8.4V 2S BMS PCM Charge/Discharge Protection Board
 - Voltage Tester Sensor Measurement Detection Module
 - DC-DC Step-Up Converter Booster Power Module
-- Adafruit NeoPixel LED Strip (2 meters, 144 LEDs per meter)
+- Adafruit DotStar LED Strip (2 meters, 144 LEDs per meter)
 - USB 3.1 Type-C Connector (24 Pins Female Plug Socket)
 - Assorted Cables and Connectors
 - 6.3V 4000 Capacitor (optional)
@@ -51,7 +51,7 @@ Unleash your creativity and redefine hula hooping with OpenHoop! This open-sourc
 ### Hula Hoop System Diagram
 
 ![Hula Hoop System Diagram](DIAGRAM.png)
-*Disclaimer: I am not an electronics engineer or expert. This diagram represents my personal setup and what worked for me. The intention is to ensure a minimum of 144 pixels due to the LED image definition, rechargeability, and a runtime of at least 2 hours. I invite the community to improve the design to work with the same OpenHoop Arduino Nano 33 BLE project and Adafruit NeoPixel LED density.
+*Disclaimer: I am not an electronics engineer or expert. This diagram represents my personal setup and what worked for me. The intention is to ensure a minimum of 144 pixels due to the LED image definition, rechargeability, and a runtime of at least 2 hours. I invite the community to improve the design to work with the same OpenHoop Arduino Nano 33 BLE project and Adafruit DotStar LED density.
 The visual representation of the hardware components and their connections can be found [here](DIAGRAM.png).*
 
 ## :computer: Software Requirements
@@ -60,7 +60,7 @@ The visual representation of the hardware components and their connections can b
 
 ## :link: Dependencies
 
-- [Adafruit NeoPixel Library](https://github.com/adafruit/Adafruit_NeoPixel)
+- [Adafruit DotStar Library](https://github.com/adafruit/Adafruit_DotStar)
 - [ArduinoBLE Library](https://github.com/arduino-libraries/ArduinoBLE)
 - [PDM Library](https://github.com/arduino-libraries/PDM)
 

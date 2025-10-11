@@ -12,6 +12,7 @@
 #include "../../include/utils/EffectUtils.h"
 #include "../../include/Config.h"
 #include "Arduino_BMI270_BMM150.h"
+#include <Adafruit_DotStar.h>
 
 /**
  * @brief Interpolate color between two given colors.
@@ -20,7 +21,7 @@ uint32_t EffectUtils::interpolateColor(uint32_t color1, uint32_t color2, int ste
     uint8_t r = map(step, 0, steps, static_cast<uint8_t>((color1 >> 16) & 0xFF), static_cast<uint8_t>((color2 >> 16) & 0xFF));
     uint8_t g = map(step, 0, steps, static_cast<uint8_t>((color1 >> 8) & 0xFF), static_cast<uint8_t>((color2 >> 8) & 0xFF));
     uint8_t b = map(step, 0, steps, static_cast<uint8_t>(color1 & 0xFF), static_cast<uint8_t>(color2 & 0xFF));
-    return Adafruit_NeoPixel::Color(r, g, b);
+    return Adafruit_DotStar::Color(r, g, b);
 }
 
 /**
@@ -82,7 +83,7 @@ uint32_t EffectUtils::applyBrightness(uint32_t color, int brightness) {
     g = (g * brightness) / 255;
     b = (b * brightness) / 255;
 
-    return Adafruit_NeoPixel::Color(r, g, b);
+    return Adafruit_DotStar::Color(r, g, b);
 }
 
 /**
