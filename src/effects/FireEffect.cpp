@@ -20,7 +20,7 @@ FireEffect::FireEffect() : cooling(100), sparking(0), numZones(3), zoneIntensity
  * @brief Initializes the Effect.
  */
 void FireEffect::start() {
-    hoop.fill(Adafruit_NeoPixel::Color(0, 0, 0));
+    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
 }
 
 /**
@@ -62,5 +62,5 @@ void FireEffect::update() {
  */
 void FireEffect::stop() {
     delete[] zoneIntensity;
-    hoop.fill(Adafruit_NeoPixel::Color(0, 0, 0));
+    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
 }

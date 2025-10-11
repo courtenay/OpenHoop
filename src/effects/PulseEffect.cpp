@@ -16,11 +16,11 @@
  * @brief Constructor for PulseEffect.
  */
 PulseEffect::PulseEffect() : pulseSpeed(1), pulseBrightness(255), pulseIncrement(5), currentColorIndex(0) {
-    colors[0] = Adafruit_NeoPixel::Color(34, 87, 122);   // Deep blue reminiscent of tranquil ocean waves
-    colors[1] = Adafruit_NeoPixel::Color(56, 163, 165);  // Subtle greenish-blue representing serene depths
-    colors[2] = Adafruit_NeoPixel::Color(87, 204, 153);  // Vibrant emerald portraying energy and vitality
-    colors[3] = Adafruit_NeoPixel::Color(128, 237, 153); // Fresh light green symbolizing renewal and growth
-    colors[4] = Adafruit_NeoPixel::Color(199, 249, 204); // Soft tea green evoking a sense of calm and balance
+    colors[0] = Adafruit_DotStar::Color(34, 87, 122);   // Deep blue reminiscent of tranquil ocean waves
+    colors[1] = Adafruit_DotStar::Color(56, 163, 165);  // Subtle greenish-blue representing serene depths
+    colors[2] = Adafruit_DotStar::Color(87, 204, 153);  // Vibrant emerald portraying energy and vitality
+    colors[3] = Adafruit_DotStar::Color(128, 237, 153); // Fresh light green symbolizing renewal and growth
+    colors[4] = Adafruit_DotStar::Color(199, 249, 204); // Soft tea green evoking a sense of calm and balance
 }
 
 /**
@@ -63,5 +63,5 @@ void PulseEffect::update() {
  * Turns off all LEDs on the display.
  */
 void PulseEffect::stop() {
-    hoop.fill(Adafruit_NeoPixel::Color(0, 0, 0));
+    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
 }

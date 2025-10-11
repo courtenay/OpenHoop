@@ -15,7 +15,7 @@
 #include "../include/utils/EffectUtils.h"
 #include "../include/Config.h"
 
-HulaHoopNeoPixel hoop(NUM_LEDS, LEDS_PIN, NEO_GRB + NEO_KHZ800);
+HulaHoopDotStar hoop(NUM_LEDS, LEDS_DATA_PIN, LEDS_CLOCK_PIN);
 
 BleService bleService;
 std::unique_ptr<EffectService> effectService = std::make_unique<EffectService>();
@@ -24,11 +24,11 @@ void setup() {
     // Initialize the PDM library for sound processing
     PDM.onReceive(EffectUtils::onPDMdata);
 
-    // Initialize NeoPixel hoop
+    // Initialize DotStar hoop
     hoop.begin();
     hoop.show();
 
-    // Initialize NeoPixel BLE services
+    // Initialize DotStar BLE services
     bleService.beginAndAdvertise();
 }
 

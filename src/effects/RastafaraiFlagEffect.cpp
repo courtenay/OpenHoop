@@ -67,5 +67,5 @@ void RastafaraiFlagEffect::update() {
  * Fills the LED display with black color when stopping the effect.
  */
 void RastafaraiFlagEffect::stop() {
-    hoop.fill(Adafruit_NeoPixel::Color(0, 0, 0));
+    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
 }
