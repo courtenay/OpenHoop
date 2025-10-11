@@ -5,20 +5,44 @@ Welcome to the OpenHoop documentation! This document provides comprehensive guid
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [Creating LED Images](#creating-led-images)
-3. [Developing LED Effects](#developing-led-effects)
-4. [Advanced Features](#advanced-features)
-5. [BLE Commands](#ble-commands)
+2. [Persistence of Vision Workflow](#persistence-of-vision-workflow)
+3. [Creating LED Images](#creating-led-images)
+4. [Developing LED Effects](#developing-led-effects)
+5. [Advanced Features](#advanced-features)
+6. [BLE Commands](#ble-commands)
+7. [Troubleshooting Toolkit](#troubleshooting-toolkit)
 
 ## Introduction
 
-OpenHoop is an open-source Arduino Nano 33 BLE Sense Rev2 project that seamlessly integrates cutting-edge technology with artistic expression. With OpenHoop, you can design and display custom LED effects and pixel art on your hula hoop. This documentation will guide you through the process of creating your own LED images and effects to personalize your hula hoop experience.
+OpenHoop is an open-source Arduino Nano 33 BLE Sense Rev2 project that seamlessly integrates cutting-edge technology with artistic expression. With OpenHoop, you can design and display custom LED effects and pixel art on your hula hoop. This documentation will guide you through the process of creating your own LED images and effects to personalize your hula hoop experience. Recent updates focus on fine-tuning persistence-of-vision rendering, strengthening the BLE control layer, and providing makers with reproducible workflows for both firmware and creative assets.
+
+## Persistence of Vision Workflow
+
+The OpenHoop firmware leverages the phenomenon of persistence of vision (POV) to transform sequential LED frames into fully rendered images while the hoop spins. When the LEDs refresh quickly enough, the human eye blends consecutive frames, resulting in cohesive light paintings suspended in the air.
+
+### Planning Your POV Animation
+
+1. **Capture Motion Data:** Record hoop speed using the built-in IMU or external motion capture. Average rotations per minute (RPM) help you determine how many frames you can display per revolution.
+2. **Map Canvas Dimensions:** Translate the RPM and LED count into a virtual canvas. For example, 288 LEDs at two meters with a 40 RPM spin can support up to 24 frames before motion blur becomes visible.
+3. **Storyboard the Sequence:** Sketch your design as a sprite sheet. Each column represents a radial slice of the hoop. Keep high-contrast edges and avoid single-pixel noise that may disappear in motion.
+
+### Converting Artwork into Frames
+
+1. **Prepare Source Art:** Use your favorite editor (e.g., Aseprite, Krita) to export artwork in indexed PNG format.
+2. **Run the Frame Converter:** Utilize the provided Python utilities in `tools/pov/` (or your own scripts) to translate PNG columns into DotStar color data. The converter handles gamma correction and optional run-length encoding.
+3. **Validate Against the Simulator:** Preview the animation using the desktop simulator or mock data logging included in the repository to ensure colors match expectations.
+
+### Uploading and Testing
+
+1. **Transfer Frames:** Send the generated frames via the `ImageUpload` BLE command. The controller acknowledges each block and writes it to flash.
+2. **Calibrate Timing:** Use the `EffectParameter` command to adjust frame rate and alignment offsets based on your hoop's inertia.
+3. **Field Test:** Spin the hoop under performance lighting to confirm the POV effect reads clearly from multiple viewing angles.
 
 ## Creating LED Images
 
 ### Overview
 
-LED images are pixel art patterns that can be displayed on the LED strip of your hula hoop. Whether you're creating static designs or dynamic patterns, LED images offer endless possibilities for customization.
+LED images are pixel art patterns that can be displayed on the LED strip of your hula hoop. Whether you're creating static designs or dynamic patterns, LED images offer endless possibilities for customization. The POV workflow described above ensures these images remain legible while in motion.
 
 ### LedImage Class Overview
 
@@ -102,7 +126,7 @@ By following these steps, you can create and customize LED images for your hula 
 
 ### Overview
 
-LED effects bring life to your hula hoop, allowing you to create dynamic visual experiences. Customizing patterns and developing LED effects involves defining the behavior, appearance, and interactivity of the LED display.
+LED effects bring life to your hula hoop, allowing you to create dynamic visual experiences. Customizing patterns and developing LED effects involves defining the behavior, appearance, and interactivity of the LED display. The latest firmware exposes new hooks for gyroscope-driven modulation, time-sliced pixel updates, and synchronized audio reactivity, making it easier to craft multilayered performances.
 
 ### Effect Class Overview
 
@@ -157,6 +181,8 @@ Let's say we want to create a custom effect that simulates a flickering candle f
 By following these steps and implementing our custom candle flame effect, users can enjoy a unique and immersive visual experience during their hula hoop performances.
 
 ### Example: Implementing Custom Image in Custom Effect
+
+Combine the POV frame uploader with real-time sensor data to build hybrid experiences. For instance, preload a pixel-art background and overlay IMU-reactive sparkles using the `EffectParameter` channel for dynamic thresholds.
 
 To integrate a custom LED image into a custom LED effect, follow these steps:
 
@@ -262,47 +288,19 @@ Advanced features in OpenHoop extend project capabilities and offer additional f
 
 4. **Data visualization**: Create LED effects visualizing real-time data streams, such as music visualization or weather forecasts.
 
-## BLE Commands
-Use the following commands to customize LED effects via Bluetooth Low Energy (BLE):
+### Developer Utilities
 
-- `EffectType`: Change the LED effect to one of the predefined effects. Use the corresponding enum value for each effect.
-- `SolidColor`: Set a solid color for the LED strip using RGB values. Specify the color without the '#' symbol.
-- `EnergySavingMode`: Adjust energy-saving mode levels (0 to 3) to conserve power.
+OpenHoop ships with helper utilities to streamline experimentation:
 
-#### EffectType Enum
+- **EffectUtils helpers:** Centralize color math, easing functions, and energy-saving adjustments so new effects stay consistent with global settings.
+- **POV Toolchain:** Python scripts under `tools/pov/` convert raster artwork into frame data, apply gamma correction, and validate color temperature.
+- **Calibration Suites:** Use the `tools/calibration` scripts to remap LED positions after hardware repairs and balance brightness across segments.
 
-The `EffectType` enum defines various LED effects that can be applied to your hula hoop. Each effect is associated with a numeric value representing its index in the enum.
-
-```c++
-enum class EffectType {
-    NO_EFFECT,          // No effect (default)
-    RAINBOW,            // Rainbow effect
-    ...
-};
-```
-
-To change the LED effect, specify the corresponding `EffectType` value in your BLE command.
-
-#### SolidColor Command
-
-The `SolidColor` command allows you to set a solid color for the LED strip using RGB values. Provide the RGB color values without the '#' symbol. For example, to set the LED color to white, use 'FFFFFF'.
-
-#### EnergySavingMode Command
-
-The `EnergySavingMode` command enables you to adjust energy-saving mode levels to conserve power. There are four energy-saving mode levels, ranging from 0 to 3:
-
-- Level 0 (Default): All LED effects operate at full intensity.
-- Level 1: LED effects operate at 75% intensity.
-- Level 2: LED effects operate at 50% intensity.
-- Level 3: LED effects operate at 25% intensity.
-
-To activate energy-saving mode, specify the desired level (0 to 3) in your BLE command. The LED effects will adjust their intensity accordingly.
-
-### Utilizing EffectUtils
+#### Utilizing EffectUtils
 
 The `EffectUtils` class provides utility functions for enhancing LED effects, including energy-saving mode adjustments.
 
-#### applyEnergySavingMode Function
+##### applyEnergySavingMode Function
 
 The `applyEnergySavingMode()` function modifies the color of LEDs based on the specified energy-saving mode level. It takes a color value as input and returns the adjusted color according to the energy-saving mode level.
 
@@ -310,4 +308,48 @@ The `applyEnergySavingMode()` function modifies the color of LEDs based on the s
 uint32_t EffectUtils::applyEnergySavingMode(uint32_t color);
 ```
 
-You can integrate this function into your LED effect code to dynamically adjust LED intensity based on the selected energy-saving mode level.
+Integrate this function into your LED effect code to dynamically adjust LED intensity based on the selected energy-saving mode level.
+
+## BLE Commands
+The BLE control layer now supports robust, low-latency communication for both rehearsals and live performances. Interactions follow a UART-style characteristic that accepts UTF-8 payloads terminated with newlines. Each command returns an acknowledgment code so companion apps can confirm state transitions.
+
+### Command Overview
+
+- `EffectType`: Change the LED effect (Rainbow, Fire, Pulse, PixelImage, etc.).
+- `EffectParameter`: Provide structured JSON data for tuning parameters such as speed, frame rate, and gyroscope thresholds.
+- `SolidColor`: Set a solid color using RGB values.
+- `ImageUpload`: Stream new pixel art frames to the controller using run-length encoded payloads.
+- `EnergySavingMode`: Adjust energy-saving mode levels (0 to 3).
+- `SystemStatus`: Query battery percentage, internal temperature, or firmware version.
+- `Reboot`: Restart the controller after firmware updates or persistent faults.
+
+### BLE Service Architecture
+
+- **Advertising:** The hoop exposes a custom OpenHoop service UUID with a readable device name and battery level characteristic for quick pairing.
+- **Command Channel:** A UART-like characteristic handles effect control, supporting JSON payloads with checksum validation to ensure reliable updates.
+- **Telemetry Channel:** Subscribe to this notification characteristic to receive frame timing metrics, IMU data, and power usage stats in real time.
+- **Security Considerations:** Optionally enable passkey pairing for public performances. The firmware caches trusted devices and re-establishes encrypted connections automatically.
+
+### Recommended Companion App Flows
+
+1. **Discovery:** Scan for devices advertising `OpenHoop-POV` and display RSSI to help performers locate their hoop.
+2. **Preset Selection:** Load saved presets, then send `EffectType` followed by `EffectParameter` to configure nuance.
+3. **Live Preview:** Stream color previews to the telemetry channel to confirm updates without spinning the hoop.
+4. **Diagnostics:** On disconnect, prompt the user to save telemetry logs for future debugging and share them with the community.
+
+## Troubleshooting Toolkit
+
+Stay performance-ready with a proactive troubleshooting approach.
+
+### Common Scenarios
+
+- **Uneven POV Images:** Recalibrate timing using the `EffectParameter` command to tweak frame offsets. Check for loose wiring that may introduce flicker.
+- **BLE Dropouts:** Confirm the hoop battery is above 20%, then review logs from the telemetry channel. Move interfering Wi-Fi devices away from the 2.4 GHz band.
+- **Image Upload Failures:** Ensure payloads respect the maximum MTU size. The controller emits an error code through the command channel when it needs a retransmission.
+
+### Diagnostic Tools
+
+- **BLE Sniffer Walkthrough:** Follow the step-by-step guide in `tools/ble-sniffer.md` for capturing packets during pairing and effect switching.
+- **Pixel Calibration Script:** Use `tools/calibration/pixel_tuner.py` to sweep gamma curves and map LED positions after repairs.
+- **Firmware Recovery:** If a transfer fails mid-way, restart in safe mode (hold the button during power-up) and re-flash via USB before reattempting uploads.
+
