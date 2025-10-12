@@ -10,6 +10,7 @@
  */
 
 #include <Arduino.h>
+#include <nrf.h>
 #include "../include/services/BleService.h"
 #include "../include/services/EffectService.h"
 #include "../include/utils/EffectUtils.h"
@@ -22,9 +23,31 @@ constexpr float kAdcToVoltage = REF_VOLTAGE / BATTERY_MAX_READING;
 constexpr float kVoltageDividerRatio = (R1 + R2) / R2;
 constexpr uint8_t kMaxEnergySavingLevel = ENERGY_SAVING_MAX_LEVEL;
 constexpr uint8_t kColorBufferSize = BleService::SOLID_COLOR_VALUE_SIZE + 1;
+constexpr unsigned long kBleDimTimeoutMs = 120000UL;
+constexpr unsigned long kBleDeepSleepTimeoutMs = 600000UL;
+constexpr unsigned long kNormalEffectUpdateIntervalMs = 0UL;
+constexpr unsigned long kReducedEffectUpdateIntervalMs = 50UL;
+constexpr uint8_t kInactivityBrightnessLevel = static_cast<uint8_t>((255U * 30U + 50U) / 100U);
 
 unsigned long lastBatteryUpdateMs = 0;
+unsigned long lastBleActivityMs = 0;
+unsigned long lastEffectUpdateMs = 0;
 bool isCentralConnected = false;
+bool inactivityDimmed = false;
+uint8_t storedEnergySavingModeLevel = DEFAULT_ENERGY_SAVING_MODE;
+uint8_t storedBrightnessBeforeDim = 255;
+
+constexpr EffectType kBootEffects[] = {
+    EffectType::RAINBOW,
+    EffectType::COLORWAVE,
+    EffectType::FUNKY,
+    EffectType::RASTAFARAIFLAG,
+    EffectType::FIRE,
+    EffectType::LEOPARDRAINBOW,
+    EffectType::MUSHROOM,
+    EffectType::PULSE,
+    EffectType::SPECTRUM
+};
 
 constexpr bool isValidEffect(uint8_t effectValue) {
     return (effectValue <= static_cast<uint8_t>(EffectType::MUSHROOM)) ||
@@ -35,6 +58,28 @@ constexpr bool isValidEffect(uint8_t effectValue) {
 uint8_t clampEnergySavingLevel(uint8_t level) {
     return level > kMaxEnergySavingLevel ? kMaxEnergySavingLevel : level;
 }
+
+EffectType pickRandomBootEffect() {
+    constexpr size_t kEffectCount = sizeof(kBootEffects) / sizeof(kBootEffects[0]);
+    if (kEffectCount == 0) {
+        return EffectType::NO_EFFECT;
+    }
+
+    const size_t selectedIndex = static_cast<size_t>(random(static_cast<long>(kEffectCount)));
+    return kBootEffects[selectedIndex];
+}
+
+void seedRandomGenerator() {
+    const long entropy = static_cast<long>(analogRead(BATTERY_ANALOG_PIN)) ^ static_cast<long>(micros());
+    randomSeed(entropy);
+}
+
+void markBleActivity();
+void updateEffects();
+void handleInactivity();
+void applyInactivityDimming();
+void restoreFromInactivityDim();
+void enterDeepSleep();
 } // namespace
 
 HulaHoopDotStar hoop(NUM_LEDS, LEDS_DATA_PIN, LEDS_CLOCK_PIN);
@@ -51,12 +96,17 @@ void setup() {
 
     analogReadResolution(ANALOG_READ_RESOLUTION_BITS);
 
+    seedRandomGenerator();
+
     // Initialize the PDM library for sound processing
     PDM.onReceive(EffectUtils::onPDMdata);
 
     // Initialize DotStar hoop
     hoop.begin();
     hoop.show();
+
+    const EffectType bootEffect = pickRandomBootEffect();
+    effectService->dispatchEffectCommand(bootEffect);
 
     // Initialize DotStar BLE services
     if (!bleService.beginAndAdvertise()) {
@@ -65,7 +115,12 @@ void setup() {
         }
     }
 
+    bleService.effectCharacteristic.writeValue(static_cast<uint8_t>(bootEffect));
+
     lastBatteryUpdateMs = millis() - kBatteryUpdateIntervalMs;
+    lastBleActivityMs = millis();
+    storedEnergySavingModeLevel = hoop.getEnergySavingModeLevel();
+    storedBrightnessBeforeDim = hoop.getBrightnessLevel();
 }
 
 /**
@@ -79,9 +134,11 @@ void updateBLE() {
     if (central && central.connected()) {
         if (!isCentralConnected) {
             isCentralConnected = true;
+            markBleActivity();
         }
 
         if (bleService.solidColorCharacteristic.written()) {
+            markBleActivity();
             char colorBuffer[kColorBufferSize] = {};
             const int length = bleService.solidColorCharacteristic.readValue(colorBuffer, BleService::SOLID_COLOR_VALUE_SIZE);
             if (length > 0) {
@@ -92,6 +149,7 @@ void updateBLE() {
         }
 
         if (bleService.effectCharacteristic.written()) {
+            markBleActivity();
             const uint8_t effectValue = bleService.effectCharacteristic.value();
             if (isValidEffect(effectValue)) {
                 effectService->dispatchEffectCommand(static_cast<EffectType>(effectValue));
@@ -100,9 +158,12 @@ void updateBLE() {
         }
 
         if (bleService.energySavingModeCharacteristic.written()) {
+            markBleActivity();
             const uint8_t requestedMode = bleService.energySavingModeCharacteristic.value();
             const uint8_t clampedMode = clampEnergySavingLevel(requestedMode);
             hoop.setEnergySavingMode(clampedMode);
+            storedEnergySavingModeLevel = hoop.getEnergySavingModeLevel();
+            storedBrightnessBeforeDim = hoop.getBrightnessLevel();
             if (clampedMode != requestedMode) {
                 bleService.energySavingModeCharacteristic.writeValue(clampedMode);
             }
@@ -110,8 +171,11 @@ void updateBLE() {
     } else if (isCentralConnected) {
         bleService.resetControlCharacteristics();
         hoop.setEnergySavingMode(DEFAULT_ENERGY_SAVING_MODE);
+        storedEnergySavingModeLevel = hoop.getEnergySavingModeLevel();
+        storedBrightnessBeforeDim = hoop.getBrightnessLevel();
         BLE.advertise();
         isCentralConnected = false;
+        lastBleActivityMs = millis();
     }
 }
 
@@ -138,6 +202,84 @@ void updateBatteryLevel() {
     bleService.updateBatteryLevel(batteryVoltage);
 }
 
+namespace {
+
+void restoreFromInactivityDim() {
+    if (!inactivityDimmed) {
+        return;
+    }
+
+    hoop.setEnergySavingMode(storedEnergySavingModeLevel);
+    hoop.setDirectBrightness(storedBrightnessBeforeDim);
+    hoop.show();
+    storedEnergySavingModeLevel = hoop.getEnergySavingModeLevel();
+    storedBrightnessBeforeDim = hoop.getBrightnessLevel();
+    inactivityDimmed = false;
+    lastEffectUpdateMs = millis();
+}
+
+void applyInactivityDimming() {
+    if (inactivityDimmed) {
+        return;
+    }
+
+    storedEnergySavingModeLevel = hoop.getEnergySavingModeLevel();
+    storedBrightnessBeforeDim = hoop.getBrightnessLevel();
+    hoop.setDirectBrightness(kInactivityBrightnessLevel);
+    hoop.show();
+    inactivityDimmed = true;
+    lastEffectUpdateMs = millis();
+}
+
+void markBleActivity() {
+    lastBleActivityMs = millis();
+    if (inactivityDimmed) {
+        restoreFromInactivityDim();
+    }
+}
+
+void updateEffects() {
+    const unsigned long now = millis();
+    const unsigned long interval = inactivityDimmed ? kReducedEffectUpdateIntervalMs : kNormalEffectUpdateIntervalMs;
+    if ((now - lastEffectUpdateMs) >= interval) {
+        effectService->update();
+        lastEffectUpdateMs = now;
+    }
+}
+
+void handleInactivity() {
+    const unsigned long now = millis();
+    const unsigned long elapsed = now - lastBleActivityMs;
+
+    if (!inactivityDimmed && elapsed >= kBleDimTimeoutMs) {
+        applyInactivityDimming();
+    }
+
+    if (elapsed >= kBleDeepSleepTimeoutMs) {
+        enterDeepSleep();
+    }
+}
+
+void enterDeepSleep() {
+    BLE.stopAdvertise();
+    BLE.disconnect();
+    BLE.end();
+
+    hoop.fill(0);
+    hoop.show();
+
+    PDM.end();
+
+    delay(10);
+
+    NRF_POWER->SYSTEMOFF = 1;
+    while (true) {
+        __WFE();
+    }
+}
+
+} // namespace
+
 void loop() {
     // Update BLE communication, check for incoming commands
     updateBLE();
@@ -146,5 +288,8 @@ void loop() {
     updateBatteryLevel();
 
     // Update LED effects
-    effectService->update();
+    updateEffects();
+
+    // Apply inactivity policies
+    handleInactivity();
 }

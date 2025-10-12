@@ -177,3 +177,16 @@ void HulaHoopDotStar::setEnergySavingMode(uint8_t level) {
 uint16_t HulaHoopDotStar::getActivePixels() const {
     return activePixels;
 }
+
+void HulaHoopDotStar::setDirectBrightness(uint8_t brightness) {
+    brightnessLevel = brightness;
+    Adafruit_DotStar::setBrightness(brightnessLevel);
+}
+
+uint8_t HulaHoopDotStar::getBrightnessLevel() const {
+    return brightnessLevel;
+}
+
+uint8_t HulaHoopDotStar::getEnergySavingModeLevel() const {
+    return energySavingModeLevel;
+}
