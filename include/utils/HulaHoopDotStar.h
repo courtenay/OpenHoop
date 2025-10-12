@@ -24,7 +24,7 @@ private:
 
     uint8_t brightnessLevel; ///< Brightness level of the DotStar LEDs.
     uint16_t activePixels; ///< Number of active pixels.
-    uint16_t energySavingModeLevel; ///< Energy-saving mode level (0-8).
+    uint8_t energySavingModeLevel; ///< Energy-saving mode level (0-8).
 
 public:
     /**
@@ -56,6 +56,21 @@ public:
      * @brief Gets the number of active pixels.
      */
     uint16_t getActivePixels() const;
+
+    /**
+     * @brief Overrides the current brightness level regardless of energy-saving mode.
+     */
+    void setDirectBrightness(uint8_t brightness);
+
+    /**
+     * @brief Gets the currently applied brightness level.
+     */
+    uint8_t getBrightnessLevel() const;
+
+    /**
+     * @brief Gets the currently applied energy-saving mode level.
+     */
+    uint8_t getEnergySavingModeLevel() const;
 };
 
 #endif //OPENHOOP_HULAHOOPDOTSTAR_H
