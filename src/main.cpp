@@ -82,7 +82,12 @@ void restoreFromInactivityDim();
 void enterDeepSleep();
 } // namespace
 
-HulaHoopDotStar hoop(NUM_LEDS, LEDS_DATA_PIN, LEDS_CLOCK_PIN);
+// Instantiate the LED strip based on configuration
+#ifdef USE_DOTSTAR
+  HulaHoopDotStar hoop(NUM_LEDS, LEDS_DATA_PIN, LEDS_CLOCK_PIN, LED_COLOR_ORDER);
+#elif defined(USE_NEOPIXEL)
+  HulaHoopDotStar hoop(NUM_LEDS, LEDS_DATA_PIN, LED_COLOR_ORDER);
+#endif
 
 BleService bleService;
 std::unique_ptr<EffectService> effectService = std::make_unique<EffectService>();

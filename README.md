@@ -55,26 +55,55 @@ OpenHoop embraces the phenomenon of [Persistence of Vision (POV)](https://en.wik
 
 ## Hardware Requirements
 
+### LED Strip Selection
+
+OpenHoop now supports **both** DotStar and NeoPixel LED strips! Choose based on your needs:
+
+#### NeoPixel (WS2812B) - Recommended for Beginners
+- ✅ **Single data wire** - simpler wiring, fewer connections
+- ✅ **More affordable** - typically 30-50% cheaper than DotStar
+- ✅ **Widely available** - easier to source from multiple suppliers
+- ⚠️ Slightly lower refresh rate (still excellent for most effects)
+
+#### DotStar (APA102) - Advanced Performance
+- ✅ **Higher refresh rates** - better for fast persistence-of-vision effects
+- ✅ **More reliable signaling** - two-wire protocol less susceptible to noise
+- ⚠️ Requires two pins (data + clock)
+- ⚠️ Typically more expensive
+
+**Configuration:** Edit `include/Config.h` to select your LED type:
+```cpp
+// Uncomment ONE of these:
+#define USE_DOTSTAR    // For APA102/DotStar strips
+// #define USE_NEOPIXEL   // For WS2812B/NeoPixel strips
+```
+
+Both types work with all effects and features. See [WIRING_GUIDE.md](WIRING_GUIDE.md) for detailed pin connections.
+
 ### Simplified Design (Recommended)
 
 **Core Electronics:**
 - **Seeed Studio XIAO BLE Sense (nRF52840)** - Microcontroller (note: built-in USB-C charging is for small 1S Li-Po only; main 2S packs charge separately)
+- **LED Strip** - Choose one:
+  - **NeoPixel (WS2812B):** 2 meters, 144 LEDs/m (recommended for beginners)
+  - **DotStar (APA102):** 2 meters, 144 LEDs/m (advanced performance)
 - **Battery Options** (choose one for weight distribution):
   - **Option 1**: 2x 2S Li-Po packs (7.4V, 1500mAh each) - Distributed on opposite sides of hoop
   - **Option 2**: 3x 2S Li-Po packs (7.4V, 1000mAh each) - Distributed evenly around hoop
   - **Option 3**: Single 2S Li-Po pack (7.4V, 2500-3000mAh) - Centralized (simpler but less balanced)
 - **2S Li-Po BMS Protection Board** - One per battery pack for protection and balancing
 - **DC-DC Buck Converter** (7.4V → 5V, 3-5A) - Single converter for LED power
-- **Adafruit DotStar LED Strip** (2 meters, 144 LEDs per meter)
-- **Signal Level Shifter Components:**
+- **Signal Level Shifter Components** (optional, for long strips or noisy environments):
   - 1x WS2812/SK6812 LED (sacrificial LED for voltage boost)
   - 1x 1N4148 signal diode
-  - 100Ω resistor
+  - 1x 100Ω resistor
 - **On/Off Toggle Switch**
 - **Assorted Cables and Connectors**
 - **1000µF Capacitor** (for LED power smoothing, optional but recommended)
 
-> **Why this design?** The XIAO BLE Sense includes built-in USB-C charging, eliminating the need for separate charging circuits and voltage monitoring modules. The diode trick using a sacrificial LED boosts the 3.3V data signal to ~4.6V for reliable LED communication without requiring a dedicated level shifter IC. This reduces component count, cost, and complexity while maintaining full functionality.
+> **Why this design?** The XIAO BLE Sense includes built-in USB-C charging, eliminating separate charging circuits. The 2S battery configuration with buck converter is more efficient than boost converters. NeoPixel strips simplify wiring with single-wire data. Optional level shifting (using the sacrificial LED trick) boosts 3.3V signals to ~4.6V for long strips without requiring expensive level shifter ICs. This reduces component count, cost, and complexity while maintaining full functionality.
+
+**📘 Complete assembly instructions:** See [WIRING_GUIDE.md](WIRING_GUIDE.md) for detailed step-by-step wiring with incremental testing at each stage.
 
 ### Alternative Design (Original)
 
@@ -152,19 +181,42 @@ This creates approximately 4.6V on the data line (3.3V + LED forward voltage dro
 
 ## Dependencies
 
-- [Adafruit DotStar Library](https://github.com/adafruit/Adafruit_DotStar)
+- [Adafruit DotStar Library](https://github.com/adafruit/Adafruit_DotStar) - For APA102/DotStar LED strips
+- [Adafruit NeoPixel Library](https://github.com/adafruit/Adafruit_NeoPixel) - For WS2812B/NeoPixel LED strips
 - [ArduinoBLE Library](https://github.com/arduino-libraries/ArduinoBLE)
 - [PDM Library](https://github.com/arduino-libraries/PDM)
 
+**Note:** Both LED libraries are included in `platformio.ini`. Only the one selected in `Config.h` will be compiled into your build.
+
 ## Setup Guide
+
+### Software Configuration
 
 1. **Clone this repository:** `git clone https://github.com/angelcamelot/OpenHoop.git`
 2. **Open the `OpenHoop` folder in PlatformIO.**
-3. **Select the appropriate build environment:**
+3. **Configure LED strip type in `include/Config.h`:**
+   ```cpp
+   // Uncomment ONE of these lines:
+   #define USE_DOTSTAR    // For APA102/DotStar strips
+   // #define USE_NEOPIXEL   // For WS2812B/NeoPixel strips
+   ```
+4. **Select the appropriate build environment:**
    - For **Seeed Studio XIAO BLE Sense** (simplified design): Use `env:xiao_ble_sense`
    - For **Arduino Nano 33 BLE Sense Rev2** (original design): Use `env:nano33ble`
-4. **Install the required libraries using the PlatformIO Library Manager** (done automatically on first build).
-5. **Connect your hardware via USB and upload the code to your microcontroller.**
+5. **Install the required libraries using the PlatformIO Library Manager** (done automatically on first build).
+6. **Connect your hardware via USB and upload the code to your microcontroller.**
+
+### Hardware Assembly
+
+**📘 For complete hardware assembly instructions with incremental testing at each stage, see [WIRING_GUIDE.md](WIRING_GUIDE.md).**
+
+The wiring guide covers:
+- Detailed pin connections for both XIAO and Nano 33
+- Step-by-step assembly with testing after each stage
+- Both NeoPixel and DotStar wiring diagrams
+- Battery and BMS installation
+- Buck converter setup
+- Troubleshooting common issues
 
 ## Usage
 

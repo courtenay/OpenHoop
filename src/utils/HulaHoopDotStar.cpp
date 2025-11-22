@@ -1,10 +1,10 @@
 /**
  * @project OpenHoop
  * @file HulaHoopDotStar.cpp
- * @brief Implementation file for the HulaHoopDotStar class, providing functionality for managing DotStar LEDs with
+ * @brief Implementation file for the HulaHoopDotStar class, providing functionality for managing LED strips with
  * energy-saving modes.
- * @details This class extends the Adafruit_DotStar library to include energy-saving modes and dynamic pixel
- * management.
+ * @details This class extends either Adafruit_DotStar or Adafruit_NeoPixel library to include energy-saving modes
+ * and dynamic pixel management. The specific LED type is selected via Config.h.
  * @author github.com/angelcamelot
  * @date 2024-04-07
  * @license Open-source license.
@@ -12,8 +12,9 @@
 
 #include "../../include/utils/HulaHoopDotStar.h"
 
+#ifdef USE_DOTSTAR
 /**
- * @brief Constructor for the HulaHoopDotStar class using bit-bang SPI.
+ * @brief Constructor for the HulaHoopDotStar class using DotStar bit-bang SPI.
  * @param n Number of LEDs.
  * @param dataPin Data pin.
  * @param clockPin Clock pin.
@@ -21,18 +22,30 @@
  */
 HulaHoopDotStar::HulaHoopDotStar(uint16_t n, uint8_t dataPin, uint8_t clockPin, uint8_t order)
     : Adafruit_DotStar(n, dataPin, clockPin, order), brightnessLevel(255), activePixels(n), energySavingModeLevel(0) {
-    Adafruit_DotStar::setBrightness(brightnessLevel);
+    LED_BASE_CLASS::setBrightness(brightnessLevel);
 }
 
 /**
- * @brief Constructor for the HulaHoopDotStar class using hardware SPI.
+ * @brief Constructor for the HulaHoopDotStar class using DotStar hardware SPI.
  * @param n Number of LEDs.
  * @param order Color order.
  */
 HulaHoopDotStar::HulaHoopDotStar(uint16_t n, uint8_t order)
     : Adafruit_DotStar(n, order), brightnessLevel(255), activePixels(n), energySavingModeLevel(0) {
-    Adafruit_DotStar::setBrightness(brightnessLevel);
+    LED_BASE_CLASS::setBrightness(brightnessLevel);
 }
+#elif defined(USE_NEOPIXEL)
+/**
+ * @brief Constructor for the HulaHoopDotStar class using NeoPixel.
+ * @param n Number of LEDs.
+ * @param dataPin Data pin.
+ * @param type LED type and color order.
+ */
+HulaHoopDotStar::HulaHoopDotStar(uint16_t n, uint8_t dataPin, neoPixelType type)
+    : Adafruit_NeoPixel(n, dataPin, type), brightnessLevel(255), activePixels(n), energySavingModeLevel(0) {
+    LED_BASE_CLASS::setBrightness(brightnessLevel);
+}
+#endif
 
 /**
  * @brief Applies energy-saving mode to the specified level.
@@ -89,11 +102,11 @@ void HulaHoopDotStar::applyEnergySavingMode(uint8_t level) {
             return; // Invalid mode
     }
 
-    Adafruit_DotStar::setBrightness(brightnessLevel);
+    LED_BASE_CLASS::setBrightness(brightnessLevel);
 
     // Clear any unused physical pixels when reducing active pixel count to avoid ghosting.
     if (energySavingModeLevel >= 3) {
-        Adafruit_DotStar::fill(0, 0, numPixels());
+        LED_BASE_CLASS::fill(0, 0, numPixels());
     }
 }
 
@@ -121,13 +134,13 @@ void HulaHoopDotStar::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b)
         return;
     }
 
-    Adafruit_DotStar::setPixelColor(mappedIndex, r, g, b);
+    LED_BASE_CLASS::setPixelColor(mappedIndex, r, g, b);
 
     // Ensure non-addressed neighbors remain dark for persistence of vision timing.
     for (uint16_t offset = 1; offset < step; ++offset) {
         uint16_t neighbor = mappedIndex + offset;
         if (neighbor < numPixels()) {
-            Adafruit_DotStar::setPixelColor(neighbor, 0, 0, 0);
+            LED_BASE_CLASS::setPixelColor(neighbor, 0, 0, 0);
         }
     }
 }
@@ -180,7 +193,7 @@ uint16_t HulaHoopDotStar::getActivePixels() const {
 
 void HulaHoopDotStar::setDirectBrightness(uint8_t brightness) {
     brightnessLevel = brightness;
-    Adafruit_DotStar::setBrightness(brightnessLevel);
+    LED_BASE_CLASS::setBrightness(brightnessLevel);
 }
 
 uint8_t HulaHoopDotStar::getBrightnessLevel() const {
