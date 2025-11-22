@@ -58,9 +58,12 @@ OpenHoop embraces the phenomenon of [Persistence of Vision (POV)](https://en.wik
 ### Simplified Design (Recommended)
 
 **Core Electronics:**
-- **Seeed Studio XIAO BLE Sense (nRF52840)** - Microcontroller with built-in battery charging
-- **2S Li-Po Battery Pack** (7.4V, 2000-3000mAh) - Single battery pack replaces multiple cells
-- **2S Li-Po BMS Protection Board** - Battery protection and balancing
+- **Seeed Studio XIAO BLE Sense (nRF52840)** - Microcontroller (note: built-in USB-C charging is for small 1S Li-Po only; main 2S packs charge separately)
+- **Battery Options** (choose one for weight distribution):
+  - **Option 1**: 2x 2S Li-Po packs (7.4V, 1500mAh each) - Distributed on opposite sides of hoop
+  - **Option 2**: 3x 2S Li-Po packs (7.4V, 1000mAh each) - Distributed evenly around hoop
+  - **Option 3**: Single 2S Li-Po pack (7.4V, 2500-3000mAh) - Centralized (simpler but less balanced)
+- **2S Li-Po BMS Protection Board** - One per battery pack for protection and balancing
 - **DC-DC Buck Converter** (7.4V → 5V, 3-5A) - Single converter for LED power
 - **Adafruit DotStar LED Strip** (2 meters, 144 LEDs per meter)
 - **Signal Level Shifter Components:**
@@ -94,6 +97,40 @@ For reference, the original design used:
 - Soldering Iron (recommended for assembly)
 - Heat Shrink Tubing
 - Wire Stripper/Cutter
+
+### Power System Design Notes
+
+**Why 2S (7.4V) instead of 1S (3.7V)?**
+
+For LED applications with high current draw, 2S configuration with buck (step-down) converter is superior:
+- **Higher efficiency**: Buck converters (85-95%) vs boost converters (80-90%)
+- **Better voltage headroom**: 7.4V nominal provides stable 5V even when battery drains to 6.4V
+- **Lower current draw**: At 15W LED power, 2S draws ~2A vs 1S drawing ~4A
+- **Less voltage sag**: Lower current means less performance degradation under load
+- **Cooler operation**: More efficient = less heat in the hoop
+
+**Battery Wiring for Distributed Packs:**
+
+When using multiple 2S packs:
+1. Wire all packs in **parallel** (positive to positive, negative to negative)
+2. Each pack needs its own BMS protection board
+3. Use appropriately rated connectors (XT30 or XT60 recommended)
+4. Connect combined battery output to buck converter input
+5. Buck converter output feeds LED strip 5V rail
+6. XIAO BLE powers from 5V rail (via 5V pin or USB-C connector)
+
+**Total capacity examples:**
+- 2x 1500mAh = 3000mAh total @ 7.4V
+- 3x 1000mAh = 3000mAh total @ 7.4V
+
+**Charging Options:**
+
+For 2S battery packs:
+- **Option A** (Simple): Remove packs and charge with external 2S Li-Po balance charger
+- **Option B** (Integrated): Install 2S balance charge port in hoop (requires 2S charging module like TP4056-based 2S charger)
+- **Option C** (Quick-swap): Use multiple sets of charged packs for extended performance sessions
+
+Note: The XIAO's built-in charging circuit is designed for small single-cell (1S) Li-Po batteries only and is not used for the main 2S power system.
 
 ### Signal Level Shifting Wiring (Diode Trick)
 
