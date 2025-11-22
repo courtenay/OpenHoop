@@ -148,51 +148,138 @@ Both boards work with either LED type:
 - LED strip (NeoPixel or DotStar)
 - Jumper wires
 - USB power
+- **Level shifter components** (see below - REQUIRED for reliable operation!)
+
+### ⚠️ CRITICAL: 3.3V Signal Level Issue
+
+**The microcontroller outputs 3.3V logic, but WS2812B/NeoPixel strips powered at 5V require ~3.5V minimum for reliable data transmission.**
+
+Without level shifting, you may experience:
+- First LED not lighting up
+- Intermittent flickering or wrong colors
+- Data corruption on longer strips
+
+**Solution: You MUST use one of these level shifting methods:**
+
+#### Level Shifter Option 1: 74HCT245 IC (Recommended)
+- Most reliable solution
+- Clean, fast signal transitions
+- Required for strips >100 LEDs
+- Cost: ~$0.50
+
+#### Level Shifter Option 2: Sacrificial LED Trick (Budget)
+- Uses spare WS2812 LED + diode
+- Good for testing and short strips
+- May have timing issues on very long strips
+- Cost: ~$0.10
+
+#### Alternative: Use a 5V Logic Microcontroller
+- Arduino Uno, Mega, or other 5V logic boards
+- **Not compatible with OpenHoop's nRF52840 BLE features!**
+- You would lose: BLE control, IMU, low power modes
+- Only mentioned for completeness - not recommended for this project
+
+**We'll show both wiring options below (using the recommended nRF52840 boards with level shifters).**
+
+---
 
 ### Wiring Diagrams
 
-#### Option A: NeoPixel (WS2812B) - 1-Wire Connection
+#### Option A1: NeoPixel with 74HCT245 Level Shifter (RECOMMENDED)
 
 ```
-XIAO BLE Sense:                         NeoPixel Strip:
-┌─────────────┐                         ┌──────────────┐
-│             │                         │              │
-│     3V3 ────┼─────────────────────────┼─── VCC (5V)  │
-│             │                         │              │
-│     GND ────┼─────────────────────────┼─── GND       │
-│             │                         │              │
-│  D10/A10 ───┼─────────────────────────┼─── DIN       │
-│             │                         │              │
-└─────────────┘                         └──────────────┘
+XIAO BLE Sense:          74HCT245:                NeoPixel Strip:
+┌─────────────┐          ┌────────┐               ┌──────────────┐
+│             │          │        │               │              │
+│     5V ─────┼──────────┤ VCC    │               │              │
+│             │          │        │               │              │
+│     GND ────┼──────┬───┤ GND    │               │              │
+│             │      │   │        │               │              │
+│  D10/A10 ───┼──────┼───┤ A1  B1 ├───────────────┼─── DIN       │
+│             │      │   │        │               │              │
+│     3V3 ────┼──────┘   │        │               │              │
+│             │      (tie to A)   │               │              │
+└─────────────┘          └────────┘               │              │
+                              │                   │              │
+                              └───── 5V ──────────┼─── VCC       │
+                                                  │              │
+                              GND ────────────────┼─── GND       │
+                                                  │              │
+                                                  └──────────────┘
 ```
 
-**NeoPixel connections:**
-- LED Strip VCC → XIAO 3V3 (or 5V for brighter, but test carefully)
-- LED Strip GND → XIAO GND
-- LED Strip DIN (Data In) → XIAO D10/A10
+**74HCT245 connections:**
+- 74HCT245 VCC → 5V (from buck or USB)
+- 74HCT245 GND → Common GND
+- 74HCT245 A1 (input) → XIAO D10/A10
+- 74HCT245 B1 (output) → LED Strip DIN
+- 74HCT245 DIR → 3.3V (sets direction A→B)
+- 74HCT245 OE → GND (output enable, active low)
+
+#### Option A2: NeoPixel with Sacrificial LED Trick (BUDGET)
+
+```
+XIAO BLE Sense:                               NeoPixel Strip:
+┌─────────────┐                               ┌──────────────┐
+│             │       ┌───────────┐           │              │
+│             │       │ Spare LED │           │              │
+│  D10/A10 ───┼──[470Ω]─(+)──(-)──┤           │              │
+│             │       │           │           │              │
+│             │       └─────┬─────┘           │              │
+│             │             │                 │              │
+│             │        [1N4148 diode]         │              │
+│             │         │        │            │              │
+│             │         └────────┴────────────┼─── DIN       │
+│             │                               │              │
+│     3V3 ────┼───────────────────────────────┼─── VCC       │
+│             │                               │              │
+│     GND ────┼───────┬───────────────────────┼─── GND       │
+│             │       │                       │              │
+└─────────────┘       └── LED cathode (-)     └──────────────┘
+```
+
+**Sacrificial LED connections:**
+- XIAO D10 → 470Ω resistor → Spare LED anode (+)
+- Spare LED cathode (-) → GND
+- Spare LED data out → 1N4148 diode anode
+- Diode cathode → LED Strip DIN
+
+**How it works:** The spare LED's output drives the strip's input at ~4.5V, well above the 3.5V threshold.
+
+**NeoPixel power connections (both options):**
+- LED Strip VCC → 5V (from buck converter) or 3V3 for USB testing
+- LED Strip GND → Common GND
 
 #### Option B: DotStar (APA102) - 2-Wire Connection
+
+**Note:** DotStar/APA102 LEDs are more tolerant of 3.3V signals than NeoPixels due to their clock-based protocol. Level shifting is **optional but recommended** for strips >150 LEDs.
 
 ```
 XIAO BLE Sense:                         DotStar Strip:
 ┌─────────────┐                         ┌──────────────┐
 │             │                         │              │
-│     3V3 ────┼─────────────────────────┼─── VCC (5V)  │
+│     5V ─────┼─────────────────────────┼─── VCC (5V)  │
 │             │                         │              │
 │     GND ────┼─────────────────────────┼─── GND       │
 │             │                         │              │
-│  D10/A10 ───┼─────────────────────────┼─── DATA      │
+│  D10/A10 ───┼────[100Ω resistor]──────┼─── DATA      │
 │             │                         │              │
-│   D8/A8 ────┼─────────────────────────┼─── CLK       │
+│   D8/A8 ────┼────[100Ω resistor]──────┼─── CLK       │
 │             │                         │              │
 └─────────────┘                         └──────────────┘
 ```
 
 **DotStar connections:**
-- LED Strip VCC → XIAO 3V3 (or 5V for brighter, but test carefully)
+- LED Strip VCC → 5V (from buck converter) or 3V3 for USB testing
 - LED Strip GND → XIAO GND
-- LED Strip DATA → XIAO D10/A10
-- LED Strip CLK (Clock) → XIAO D8/A8
+- LED Strip DATA → XIAO D10/A10 (via 100Ω series resistor for signal protection)
+- LED Strip CLK (Clock) → XIAO D8/A8 (via 100Ω series resistor)
+
+**Why DotStar works better with 3.3V:**
+- APA102 uses SPI-style clocked protocol (more noise-immune)
+- Accepts wider voltage range on inputs
+- Clock signal helps maintain timing even with marginal logic levels
+- Still benefits from series resistors to reduce ringing
 
 ### ⚠️ Important USB Power Limitations
 
@@ -400,48 +487,52 @@ Battery +7.4V ────┬─────[ 30kΩ R1 ]─────┬──
 
 ### Complete System Wiring Diagram
 
+**Note:** This diagram shows NeoPixel with 74HCT245 level shifter (recommended). For DotStar or budget builds, see Stage 2 wiring options.
+
 ```
                                     ┌─────────────────────────────────────────┐
                                     │         COMPLETE SYSTEM DIAGRAM         │
                                     └─────────────────────────────────────────┘
 
-2S Battery Pack(s)          BMS Protection          Buck Converter          LED Strip
-┌──────────────┐           ┌─────────────┐         ┌──────────────┐        ┌─────────────┐
-│              │           │             │         │              │        │             │
-│   7.4V       │           │  Over-      │         │  Input:      │        │  144-288    │
-│   Li-Po      │           │  discharge  │         │  6-8.4V      │        │  LEDs       │
-│              │           │  Overcurrent│         │              │        │             │
-│  Cell 1 ─────┼───(+)─────┤ B+          │         │              │        │             │
-│  3.7V        │           │             │         │              │        │             │
-│              ├───(bal)───┤ B1          │    ┌────┤ Output:      ├───(+)──┤ VCC         │
-│              │           │             │    │    │  5.0V        │        │             │
-│  Cell 2 ─────┼───(bal)───┤ B2       P+ ├────┤    │  3-5A        │        │             │
-│  3.7V        │           │             │    │    │              │        │             │
-│              ├───(-)─────┤ B-          │    │    └───────┬──────┘        │             │
-│              │           │             │    │            │               │             │
-│              │           │          P- ├────┼────────────┴───────(-)─────┤ GND         │
-└──────────────┘           └──────┬──────┘    │                            │             │
-      │                           │           │            ┌───────────────┤ DATA IN     │
-      │                           │           │            │               │             │
-      │                           │           │         [XIAO BLE Sense]   │  (DotStar:) │
-      │                           │           │            │               │  CLOCK IN   │
-      │                           │           │            ├── D10/A10 ────┤             │
-      │                    [Voltage Divider]  │            │               │             │
-      │                           │           │            ├── D8/A8 ──────┤ (optional)  │
-      │                      30kΩ │           │            │               │             │
-      └───────────────────────────┴───────────┴────────────┤ 5V (power in) │             │
-                                  │           └────────────┤               │             │
-                                7.5kΩ                      │               │             │
-                                  │                        ├── A0/D0       │             │
-                                  │                        │  (bat sense)  │             │
-                                 GND ──────────────────────┤ GND           │             │
-                                                           │               │             │
-                                                           └───────────────┴─────────────┘
-                                                                  │
-                                                            [1000µF Cap]
-                                                            (across 5V/GND)
+2S Battery Pack(s)          BMS Protection          Buck Converter          74HCT245         LED Strip
+┌──────────────┐           ┌─────────────┐         ┌──────────────┐        ┌────────┐      ┌─────────────┐
+│              │           │             │         │              │        │        │      │             │
+│   7.4V       │           │  Over-      │         │  Input:      │        │  VCC───┼──────┤ VCC (5V)    │
+│   Li-Po      │           │  discharge  │         │  6-8.4V      │        │        │      │             │
+│              │           │  Overcurrent│         │              │        │  GND───┼──┐   │             │
+│  Cell 1 ─────┼───(+)─────┤ B+          │         │              │        │        │  │   │             │
+│  3.7V        │           │             │         │              │        │        │  │   │  144-288    │
+│              ├───(bal)───┤ B1          │    ┌────┤ Output:      ├───(+)──┤        │  │   │  NeoPixels  │
+│              │           │             │    │    │  5.0V        │        │        │  │   │             │
+│  Cell 2 ─────┼───(bal)───┤ B2       P+ ├────┤    │  3-5A        │        │        │  │   │             │
+│  3.7V        │           │             │    │    │              │        │        │  │   │             │
+│              ├───(-)─────┤ B-          │    │    └───────┬──────┘        │        │  │   │             │
+│              │           │             │    │            │               │        │  │   │             │
+│              │           │          P- ├────┼────────────┴───────(-)─────┤        │  └───┤ GND         │
+└──────────────┘           └──────┬──────┘    │                            │        │      │             │
+      │                           │           │            ┌───────────────┤ A1  B1─┼──────┤ DATA IN     │
+      │                           │           │            │               │        │      │             │
+      │                           │           │         [XIAO BLE Sense]   │  DIR   │      │             │
+      │                           │           │            │          3.3V─┤  (A→B) │      │             │
+      │                           │           │            ├── D10/A10 ────┤        │      │             │
+      │                    [Voltage Divider]  │            │               │  OE────┤      │             │
+      │                           │           │            │          GND──┤ (enable)│     │             │
+      │                      30kΩ │           │            │               │        │      │             │
+      └───────────────────────────┴───────────┴────────────┤ 5V (power in) └────────┘      │             │
+                                  │           └────────────┤                               │             │
+                                7.5kΩ                      │                               │             │
+                                  │                        ├── A0/D0                        │             │
+                                  │                        │  (bat sense)                   │             │
+                                 GND ──────────────────────┤ GND                            └─────────────┘
+                                                           │                                      │
+                                                           └──────────────────────────────────────┤
+                                                                                            [1000µF Cap]
+                                                                                            (across 5V/GND)
 
 Optional Power Switch: ────┬─── Between Battery+ and BMS B+
+
+**Level Shifter Note:** 74HCT245 converts 3.3V logic (from XIAO D10) to 5V logic (for LED DATA IN).
+Without this, NeoPixels may not reliably receive data signals. See Stage 2 for alternative methods.
 ```
 
 ### Step-by-Step Assembly
@@ -481,9 +572,20 @@ Optional Power Switch: ────┬─── Between Battery+ and BMS B+
    - Buck OUT+ (5V) → XIAO 5V pin
    - Buck OUT- (GND) → XIAO GND
 
-5. **Microcontroller → LED Strip Data**
-   - For NeoPixel: XIAO D10 → LED DIN
-   - For DotStar: XIAO D10 → LED DATA, XIAO D8 → LED CLK
+5. **Level Shifter Installation** (for NeoPixel - REQUIRED!)
+   - 74HCT245 VCC → Buck OUT+ (5V)
+   - 74HCT245 GND → Common GND
+   - 74HCT245 DIR pin → XIAO 3.3V (sets A→B direction)
+   - 74HCT245 OE pin → GND (enable output, active low)
+
+6. **Microcontroller → Level Shifter → LED Strip Data**
+   - **For NeoPixel (with level shifter):**
+     - XIAO D10 → 74HCT245 A1 (input)
+     - 74HCT245 B1 (output) → LED DIN
+   - **For DotStar (optional level shifter):**
+     - XIAO D10 → (optional: 74HCT245 A1) → LED DATA
+     - XIAO D8 → (optional: 74HCT245 A2) → LED CLK
+     - Or direct with 100Ω series resistors (see Stage 2)
 
 #### 3. Optional: Power Switch
 
@@ -728,42 +830,9 @@ Change these values to adjust timeouts.
 
 ---
 
-## Advanced: Level Shifting for Reliable Signals
-
-For long LED strips or noisy environments, you may need to boost the 3.3V data signal to 5V.
-
-### Option 1: Sacrificial LED "Diode Trick" (Cheap)
-
-Works for both NeoPixel and DotStar:
-
-```
-XIAO D10 ──[ 100Ω ]──┬──(+)LED(-)──[ 1N4148 diode ]──→ LED Strip DIN
-                     │
-                    GND
-```
-
-**How it works:**
-- LED forward voltage drop ≈ 3.0V
-- Diode forward voltage drop ≈ 0.7V
-- Total output: 3.3V + 3.0V - 0.7V ≈ 5.6V (clamped to ~4.6V by strip)
-
-**Parts:**
-- 1x WS2812 or SK6812 LED (any color)
-- 1x 1N4148 signal diode
-- 1x 100Ω resistor
-
-### Option 2: Dedicated Level Shifter IC (Professional)
-
-Use 74HCT245 or similar:
-- More reliable
-- Cleaner signals
-- Recommended for >3 meter strips
-
----
-
 ## Summary of Pin Connections
 
-### Quick Reference: XIAO BLE Sense
+### Quick Reference: XIAO BLE Sense (with Level Shifter)
 
 | From | To | Notes |
 |------|-----|-------|
@@ -772,18 +841,25 @@ Use 74HCT245 or similar:
 | BMS P+ | Buck IN+ | Power path |
 | BMS P- | Buck IN- | |
 | Buck 5V OUT | XIAO 5V | Microcontroller power |
+| Buck 5V OUT | 74HCT245 VCC | Level shifter power |
 | Buck 5V OUT | LED VCC | LED strip power |
 | Buck GND | XIAO GND | Common ground |
+| Buck GND | 74HCT245 GND | Level shifter ground |
 | Buck GND | LED GND | |
-| XIAO D10 | LED DIN | NeoPixel data |
-| XIAO D10 | LED DATA | DotStar data |
-| XIAO D8 | LED CLK | DotStar clock only |
+| XIAO 3.3V | 74HCT245 DIR | Direction control (A→B) |
+| XIAO GND | 74HCT245 OE | Output enable (active low) |
+| **XIAO D10** | **74HCT245 A1** | **3.3V logic from microcontroller** |
+| **74HCT245 B1** | **LED DIN** | **5V logic to NeoPixel data** |
+| XIAO D10 | LED DATA | DotStar data (optional level shift) |
+| XIAO D8 | LED CLK | DotStar clock (optional level shift) |
 | XIAO A0 | Voltage divider | Battery monitoring |
 
-### Quick Reference: Nano 33 BLE
+**Important:** For NeoPixel/WS2812B, the 74HCT245 level shifter is **REQUIRED**. For DotStar/APA102, it's optional.
+
+### Quick Reference: Nano 33 BLE (with Level Shifter)
 
 Same as above, except:
-- D10 → D11 (NeoPixel/DotStar data)
+- D10 → D11 (NeoPixel/DotStar data - use 74HCT245 A1)
 - D8 → D13 (DotStar clock)
 - A0 → A7 (voltage sensing)
 
