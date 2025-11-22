@@ -14,7 +14,7 @@ Welcome to the OpenHoop documentation! This document provides comprehensive guid
 
 ## Introduction
 
-OpenHoop is an open-source Arduino Nano 33 BLE Sense Rev2 project that seamlessly integrates cutting-edge technology with artistic expression. With OpenHoop, you can design and display custom LED effects and pixel art on your hula hoop. This documentation will guide you through the process of creating your own LED images and effects to personalize your hula hoop experience. Recent updates focus on fine-tuning persistence-of-vision rendering, strengthening the BLE control layer, and providing makers with reproducible workflows for both firmware and creative assets.
+OpenHoop is an open-source project supporting nRF52840-based microcontrollers (Seeed Studio XIAO BLE Sense or Arduino Nano 33 BLE Sense Rev2) that seamlessly integrates cutting-edge technology with artistic expression. With OpenHoop, you can design and display custom LED effects and pixel art on your hula hoop. This documentation will guide you through the process of creating your own LED images and effects to personalize your hula hoop experience. Recent updates focus on fine-tuning persistence-of-vision rendering, strengthening the BLE control layer, simplifying the hardware design, and providing makers with reproducible workflows for both firmware and creative assets.
 
 ## Persistence of Vision Workflow
 
@@ -118,7 +118,7 @@ Follow these steps to create a custom LED image:
     
     ```
 
-4. **Upload to your hula hoop**: Incorporate the `YourCustomImage` class into your OpenHoop codebase and upload it to your Arduino Nano 33 BLE Sense Rev2 microcontroller connected to the Adafruit Neopixel strip of your hula hoop.
+4. **Upload to your hula hoop**: Incorporate the `YourCustomImage` class into your OpenHoop codebase and upload it to your microcontroller (XIAO BLE Sense or Arduino Nano 33 BLE Sense Rev2) connected to the Adafruit DotStar LED strip of your hula hoop.
 
 By following these steps, you can create and customize LED images for your hula hoop, adding visually appealing patterns and effects to enhance your performances.
 

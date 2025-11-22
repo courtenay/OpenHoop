@@ -37,7 +37,7 @@
 
 ## About
 
-OpenHoop is a smart hula hoop controller built around an Arduino Nano 33 BLE Sense Rev2 and high-density Adafruit DotStar LEDs. It blends creative expression with robust engineering so performers can choreograph reliable, mesmerizing light shows. Today the project includes a refined Bluetooth® Low Energy (BLE) control stack, an expanding catalog of prebuilt effects, and thorough documentation for crafting custom pixel art.
+OpenHoop is a smart hula hoop controller built around nRF52840-based microcontrollers (Seeed Studio XIAO BLE Sense or Arduino Nano 33 BLE Sense Rev2) and high-density Adafruit DotStar LEDs. It blends creative expression with robust engineering so performers can choreograph reliable, mesmerizing light shows. Today the project includes a refined Bluetooth® Low Energy (BLE) control stack, an expanding catalog of prebuilt effects, and thorough documentation for crafting custom pixel art.
 
 At the moment, OpenHoop is primarily built by a solo maintainer. The system already has a solid foundation, and with help from other makers, performers, and engineers, it can quickly become the most accessible and powerful hoop platform. This repository is intentionally open so anyone can experiment, iterate, and help shape the future of LED hooping.
 
@@ -55,19 +55,34 @@ OpenHoop embraces the phenomenon of [Persistence of Vision (POV)](https://en.wik
 
 ## Hardware Requirements
 
-### Microcontroller, Power Supply, LED, and Connectivity
+### Simplified Design (Recommended)
+
+**Core Electronics:**
+- **Seeed Studio XIAO BLE Sense (nRF52840)** - Microcontroller with built-in battery charging
+- **2S Li-Po Battery Pack** (7.4V, 2000-3000mAh) - Single battery pack replaces multiple cells
+- **2S Li-Po BMS Protection Board** - Battery protection and balancing
+- **DC-DC Buck Converter** (7.4V → 5V, 3-5A) - Single converter for LED power
+- **Adafruit DotStar LED Strip** (2 meters, 144 LEDs per meter)
+- **Signal Level Shifter Components:**
+  - 1x WS2812/SK6812 LED (sacrificial LED for voltage boost)
+  - 1x 1N4148 signal diode
+  - 100Ω resistor
+- **On/Off Toggle Switch**
+- **Assorted Cables and Connectors**
+- **1000µF Capacitor** (for LED power smoothing, optional but recommended)
+
+> **Why this design?** The XIAO BLE Sense includes built-in USB-C charging, eliminating the need for separate charging circuits and voltage monitoring modules. The diode trick using a sacrificial LED boosts the 3.3V data signal to ~4.6V for reliable LED communication without requiring a dedicated level shifter IC. This reduces component count, cost, and complexity while maintaining full functionality.
+
+### Alternative Design (Original)
+
+For reference, the original design used:
 - Arduino Nano 33 BLE Sense Rev2
 - x2 High-Efficiency Output 5V 5A Mini560 Step-Down DC-DC Converters
 - x6 3000mAh 14500 3.7V Rechargeable Li-Ion Batteries
 - 7.4V–8.4V 2S BMS PCM Charge/Discharge Protection Board
 - Voltage Tester Sensor Measurement Detection Module
 - DC-DC Step-Up Converter Booster Power Module
-- Adafruit DotStar LED Strip (2 meters, 144 LEDs per meter)
 - USB 3.1 Type-C Connector (24 Pins Female Plug Socket)
-- Assorted Cables and Connectors
-- 6.3V 4000 Capacitor (optional)
-- Ceramic Capacitors (optional)
-- Male and Female Butt Socket Electric Motorcycle Wire Connector (optional)
 
 ### Hula Hoop Components
 - HDPE Tubing (7/8 inch, 2 meters)
@@ -76,9 +91,23 @@ OpenHoop embraces the phenomenon of [Persistence of Vision (POV)](https://en.wik
 
 ### Additional Tools and Materials
 - Basic Hand Tools
-- Soldering Iron (optional, for advanced assembly)
+- Soldering Iron (recommended for assembly)
+- Heat Shrink Tubing
+- Wire Stripper/Cutter
 
-> _The hero diagram at the top reflects the maintainer's personal hoop. It prioritizes at least 144 pixels for POV clarity, rechargeable packs, and two hours of runtime. Share your tweaks so we can validate additional builds!_
+### Signal Level Shifting Wiring (Diode Trick)
+
+To boost the 3.3V data signal from the XIAO BLE to ~4.6V for reliable DotStar operation:
+
+1. Connect XIAO data pin → 100Ω resistor → Anode of sacrificial LED
+2. Connect Cathode of sacrificial LED → Anode of 1N4148 diode
+3. Connect Cathode of 1N4148 diode → DotStar Data In pin
+4. The sacrificial LED's cathode also connects to GND
+5. LED power comes from 5V buck converter (not the 3.3V line)
+
+This creates approximately 4.6V on the data line (3.3V + LED forward voltage drop), ensuring reliable signal levels without a dedicated level shifter IC. See [Hackaday's guide](https://hackaday.com/2017/01/20/cheating-at-5v-ws2812-control-to-use-a-3-3v-data-line/) for more details on this technique.
+
+> _The hero diagram reflects the original design. The simplified design above reduces component count by ~50% while maintaining all functionality. Both designs prioritize 144+ pixels for POV clarity, rechargeable packs, and 2+ hours of runtime. Share your builds so we can validate additional configurations!_
 
 ## Software Requirements
 
@@ -94,8 +123,11 @@ OpenHoop embraces the phenomenon of [Persistence of Vision (POV)](https://en.wik
 
 1. **Clone this repository:** `git clone https://github.com/angelcamelot/OpenHoop.git`
 2. **Open the `OpenHoop` folder in PlatformIO.**
-3. **Install the required libraries using the PlatformIO Library Manager.**
-4. **Connect your hardware and upload the code to your microcontroller.**
+3. **Select the appropriate build environment:**
+   - For **Seeed Studio XIAO BLE Sense** (simplified design): Use `env:xiao_ble_sense`
+   - For **Arduino Nano 33 BLE Sense Rev2** (original design): Use `env:nano33ble`
+4. **Install the required libraries using the PlatformIO Library Manager** (done automatically on first build).
+5. **Connect your hardware via USB and upload the code to your microcontroller.**
 
 ## Usage
 
