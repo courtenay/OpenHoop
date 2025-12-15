@@ -11,6 +11,7 @@
 
 #include <Arduino.h>
 #include <nrf.h>
+#include <Arduino_BMI270_BMM150.h>
 #include "../include/services/BleService.h"
 #include "../include/services/EffectService.h"
 #include "../include/utils/EffectUtils.h"
@@ -105,6 +106,11 @@ void setup() {
 
     // Initialize the PDM library for sound processing
     PDM.onReceive(EffectUtils::onPDMdata);
+
+    // Initialize IMU for motion-reactive effects
+    if (!IMU.begin()) {
+        Serial.println("Failed to initialize IMU!");
+    }
 
     // Initialize DotStar hoop
     hoop.begin();
