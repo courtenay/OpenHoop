@@ -47,5 +47,5 @@ void RainbowEffect::update() {
  * Turns off all LEDs on the display.
  */
 void RainbowEffect::stop() {
-    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
+    hoop.fill(HulaHoopDotStar::Color(0, 0, 0));
 }

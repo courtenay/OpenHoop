@@ -13,6 +13,13 @@
 
 #include "utils/HulaHoopDotStar.h"
 
+// ============================================================================
+// LED STRIP TYPE SELECTION
+// ============================================================================
+// Uncomment ONE of the following to select your LED strip type:
+// #define USE_DOTSTAR    // APA102/DotStar - 2-wire (data + clock), higher refresh rates
+#define USE_NEOPIXEL   // WS2812B/NeoPixel - 1-wire (data only), more common/cheaper
+
 // Pin configuration for reading battery voltage.
 #define BATTERY_ANALOG_PIN 21  ///< Analog pin used for reading battery voltage.
 #define ANALOG_READ_RESOLUTION_BITS 12  ///< ADC resolution used for battery readings.
@@ -24,10 +31,23 @@
 #define R2 7500.0   ///< Resistance value R2 in Ohms.
 #define REF_VOLTAGE 3.3  ///< Reference voltage in volts.
 
-// LED configuration for the hoop.
+// ============================================================================
+// LED STRIP CONFIGURATION
+// ============================================================================
 #define NUM_LEDS 288  ///< Number of LEDs in the hoop.
-#define LEDS_DATA_PIN 11  ///< Data pin for the DotStar LED strip.
-#define LEDS_CLOCK_PIN 13 ///< Clock pin for the DotStar LED strip.
+
+#ifdef USE_DOTSTAR
+  // DotStar (APA102) uses 2 pins: data + clock
+  #define LEDS_DATA_PIN 11   ///< Data pin for the DotStar LED strip.
+  #define LEDS_CLOCK_PIN 13  ///< Clock pin for the DotStar LED strip.
+  #define LED_COLOR_ORDER DOTSTAR_BGR  ///< Color order for DotStar (BGR is common)
+#elif defined(USE_NEOPIXEL)
+  // NeoPixel (WS2812B) uses 1 pin: data only
+  #define LEDS_DATA_PIN 11   ///< Data pin for the NeoPixel LED strip.
+  #define LED_COLOR_ORDER NEO_GRB  ///< Color order for NeoPixel (GRB is common)
+#else
+  #error "You must define either USE_DOTSTAR or USE_NEOPIXEL in Config.h"
+#endif
 
 // Bluetooth's configuration.
 #define EFFECT_SERVICE_UUID "0A92"  ///< UUID for the effect service.
