@@ -19,6 +19,7 @@
 #include "../../include/effects/SpectrumEffect.h"
 #include "../../include/effects/RainbowLeopardEffect.h"
 #include "../../include/effects/MushroomImageEffect.h"
+#include "../../include/effects/POVEffect.h"
 #include "../../include/Config.h"
 
 /**
@@ -84,6 +85,9 @@ void EffectService::dispatchEffectCommand(EffectType gesture) {
             break;
         case EffectType::LEOPARDRAINBOW:
             setEffect(std::make_unique<RainbowLeopardEffect>());
+            break;
+        case EffectType::POV:
+            setEffect(std::make_unique<POVEffect>());
             break;
         default:
             // Stop the current effect if no matching gesture is found

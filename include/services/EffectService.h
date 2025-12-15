@@ -23,6 +23,7 @@ enum class EffectType {
     FIRE,
     LEOPARDRAINBOW,
     MUSHROOM,
+    POV = 97,
     PULSE = 98,
     SPECTRUM = 99,
 };
