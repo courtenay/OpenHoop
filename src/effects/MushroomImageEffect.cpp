@@ -64,5 +64,5 @@ void MushroomImageEffect::update() {
  * Turns off all LEDs on the display.
  */
 void MushroomImageEffect::stop() {
-    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
+    hoop.fill(HulaHoopDotStar::Color(0, 0, 0));
 }

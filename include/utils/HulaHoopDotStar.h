@@ -96,6 +96,29 @@ public:
      * @brief Gets the currently applied energy-saving mode level.
      */
     uint8_t getEnergySavingModeLevel() const;
+
+    /**
+     * @brief Creates a 32-bit color value from RGB components.
+     * @param r Red component (0-255).
+     * @param g Green component (0-255).
+     * @param b Blue component (0-255).
+     * @return 32-bit packed color value.
+     */
+    static uint32_t Color(uint8_t r, uint8_t g, uint8_t b) {
+        return LED_BASE_CLASS::Color(r, g, b);
+    }
+
+    /**
+     * @brief Creates a 32-bit color value from RGBW components.
+     * @param r Red component (0-255).
+     * @param g Green component (0-255).
+     * @param b Blue component (0-255).
+     * @param w White component (0-255).
+     * @return 32-bit packed color value.
+     */
+    static uint32_t Color(uint8_t r, uint8_t g, uint8_t b, uint8_t w) {
+        return LED_BASE_CLASS::Color(r, g, b, w);
+    }
 };
 
 #endif //OPENHOOP_HULAHOOPDOTSTAR_H

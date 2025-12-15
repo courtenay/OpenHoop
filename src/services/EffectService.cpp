@@ -19,7 +19,7 @@
 #include "../../include/effects/SpectrumEffect.h"
 #include "../../include/effects/RainbowLeopardEffect.h"
 #include "../../include/effects/MushroomImageEffect.h"
-#include <Adafruit_DotStar.h>
+#include "../../include/Config.h"
 
 /**
  * @brief Set a new effect, stopping and deleting the current one if it exists.
@@ -56,7 +56,7 @@ void EffectService::update() const {
 void EffectService::dispatchEffectCommand(EffectType gesture) {
     switch (gesture) {
         case EffectType::NO_EFFECT:
-            setEffect(std::make_unique<SolidColorFillEffect>(Adafruit_DotStar::Color(0, 0, 0)));
+            setEffect(std::make_unique<SolidColorFillEffect>(HulaHoopDotStar::Color(0, 0, 0)));
             break;
         case EffectType::RAINBOW:
             setEffect(std::make_unique<RainbowEffect>());
@@ -100,7 +100,7 @@ void EffectService::dispatchSolidColorCommand(const String& colorString) {
     // Handle potential errors gracefully:
     if (colorString.length() != 6) {
         Serial.println("Invalid color code length (must be 6 characters)");
-        setEffect(std::make_unique<SolidColorFillEffect>(Adafruit_DotStar::Color(0, 0, 0))); // Set default color in case of error
+        setEffect(std::make_unique<SolidColorFillEffect>(HulaHoopDotStar::Color(0, 0, 0))); // Set default color in case of error
         return;
     }
 
@@ -116,7 +116,7 @@ void EffectService::dispatchSolidColorCommand(const String& colorString) {
     Serial.print("Blue: "); Serial.println(blue);
 
     // Create and set the solid color effect:
-    setEffect(std::make_unique<SolidColorFillEffect>(Adafruit_DotStar::Color(red, green, blue)));
+    setEffect(std::make_unique<SolidColorFillEffect>(HulaHoopDotStar::Color(red, green, blue)));
 }
 
 EffectService::~EffectService() = default;

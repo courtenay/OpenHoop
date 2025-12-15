@@ -17,8 +17,8 @@
 // LED STRIP TYPE SELECTION
 // ============================================================================
 // Uncomment ONE of the following to select your LED strip type:
-#define USE_DOTSTAR    // APA102/DotStar - 2-wire (data + clock), higher refresh rates
-// #define USE_NEOPIXEL   // WS2812B/NeoPixel - 1-wire (data only), more common/cheaper
+// #define USE_DOTSTAR    // APA102/DotStar - 2-wire (data + clock), higher refresh rates
+#define USE_NEOPIXEL   // WS2812B/NeoPixel - 1-wire (data only), more common/cheaper
 
 // Pin configuration for reading battery voltage.
 #define BATTERY_ANALOG_PIN 21  ///< Analog pin used for reading battery voltage.

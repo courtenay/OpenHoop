@@ -35,10 +35,10 @@ void SpectrumEffect::update() {
     int waveBlueComponent = constrain(hue * 2, 0, 255);
     int waveGreenComponent = constrain(hue, 0, 255);
     int waveEffect = static_cast<int>(sin(radians(wavePosition)) * 127 + 128);
-    uint32_t waveColor = Adafruit_DotStar::Color(0, waveGreenComponent + waveEffect, waveBlueComponent);
+    uint32_t waveColor = HulaHoopDotStar::Color(0, waveGreenComponent + waveEffect, waveBlueComponent);
 
     // Calculate the inverted color for the hoop background
-    uint32_t invertedBackgroundColor = Adafruit_DotStar::Color(255 - (waveGreenComponent + waveEffect), 255 - waveBlueComponent, 255 - waveGreenComponent);
+    uint32_t invertedBackgroundColor = HulaHoopDotStar::Color(255 - (waveGreenComponent + waveEffect), 255 - waveBlueComponent, 255 - waveGreenComponent);
 
     // Calculate the number of active pixels based on the sound percentage
     int activePixels = EffectUtils::mapRange(soundIntensity, 1, 10, 1, hoop.getActivePixels());
@@ -80,5 +80,5 @@ void SpectrumEffect::update() {
  */
 void SpectrumEffect::stop() {
     PDM.end();
-    hoop.fill(Adafruit_DotStar::Color(0, 0, 0));
+    hoop.fill(HulaHoopDotStar::Color(0, 0, 0));
 }
