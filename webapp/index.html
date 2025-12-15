@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenHoop Controller</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.1);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4757;
+            margin-right: 8px;
+            display: inline-block;
+        }
+
+        .status-dot.connected {
+            background: #2ed573;
+        }
+
+        .battery {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        #connectBtn {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        #connectBtn:hover {
+            transform: scale(1.02);
+        }
+
+        #connectBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section h2 {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.6;
+            margin-bottom: 12px;
+        }
+
+        .effects-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .effect-btn {
+            padding: 14px 12px;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .effect-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .effect-btn.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .effect-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .color-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        #colorPicker {
+            width: 60px;
+            height: 50px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: none;
+        }
+
+        #colorPicker::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        #colorPicker::-webkit-color-swatch {
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        #applyColorBtn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #applyColorBtn:hover:not(:disabled) {
+            background: rgba(255,255,255,0.2);
+        }
+
+        #applyColorBtn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.2);
+            appearance: none;
+            outline: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            min-width: 30px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .presets {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .preset-btn {
+            width: 36px;
+            height: 36px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .preset-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .preset-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .log {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 0.8em;
+            max-height: 120px;
+            overflow-y: auto;
+            opacity: 0.7;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+        }
+
+        .log-entry.error {
+            color: #ff6b6b;
+        }
+
+        .log-entry.success {
+            color: #51cf66;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OpenHoop</h1>
+
+        <div class="status-bar">
+            <div>
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div class="battery" id="battery">--</div>
+        </div>
+
+        <button id="connectBtn">Connect to Hoop</button>
+
+        <div class="section">
+            <h2>Effects</h2>
+            <div class="effects-grid">
+                <button class="effect-btn" data-effect="0" disabled>Off</button>
+                <button class="effect-btn" data-effect="1" disabled>Rainbow</button>
+                <button class="effect-btn" data-effect="2" disabled>Colorwave</button>
+                <button class="effect-btn" data-effect="3" disabled>Funky</button>
+                <button class="effect-btn" data-effect="4" disabled>Rasta Flag</button>
+                <button class="effect-btn" data-effect="5" disabled>Fire</button>
+                <button class="effect-btn" data-effect="6" disabled>Leopard</button>
+                <button class="effect-btn" data-effect="7" disabled>Mushroom</button>
+                <button class="effect-btn" data-effect="98" disabled>Pulse</button>
+                <button class="effect-btn" data-effect="99" disabled>Spectrum</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Solid Color</h2>
+            <div class="color-row">
+                <input type="color" id="colorPicker" value="#ff0080">
+                <button id="applyColorBtn" disabled>Apply Color</button>
+            </div>
+            <div class="presets">
+                <button class="preset-btn" style="background: #ff0000" data-color="FF0000" disabled></button>
+                <button class="preset-btn" style="background: #ff8000" data-color="FF8000" disabled></button>
+                <button class="preset-btn" style="background: #ffff00" data-color="FFFF00" disabled></button>
+                <button class="preset-btn" style="background: #00ff00" data-color="00FF00" disabled></button>
+                <button class="preset-btn" style="background: #00ffff" data-color="00FFFF" disabled></button>
+                <button class="preset-btn" style="background: #0080ff" data-color="0080FF" disabled></button>
+                <button class="preset-btn" style="background: #8000ff" data-color="8000FF" disabled></button>
+                <button class="preset-btn" style="background: #ff00ff" data-color="FF00FF" disabled></button>
+                <button class="preset-btn" style="background: #ffffff" data-color="FFFFFF" disabled></button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Brightness (Energy Saving)</h2>
+            <div class="slider-container">
+                <span>Bright</span>
+                <input type="range" id="energySlider" min="0" max="8" value="0" disabled>
+                <span>Dim</span>
+                <span class="slider-value" id="energyValue">0</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Log</h2>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // BLE UUIDs - OpenHoop uses 16-bit UUIDs
+        const SERVICE_UUID = 0x1815; // Automation IO Service
+        const EFFECT_UUID = 0x0A92;
+        const COLOR_UUID = 0x0A93;
+        const ENERGY_UUID = 0x0A95;
+        const BATTERY_SERVICE = 0x180F;
+        const BATTERY_LEVEL_UUID = 0x2A19;
+
+        // State
+        let device = null;
+        let server = null;
+        let effectChar = null;
+        let colorChar = null;
+        let energyChar = null;
+        let batteryChar = null;
+        let currentEffect = null;
+
+        // DOM elements
+        const connectBtn = document.getElementById('connectBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const batteryEl = document.getElementById('battery');
+        const effectBtns = document.querySelectorAll('.effect-btn');
+        const colorPicker = document.getElementById('colorPicker');
+        const applyColorBtn = document.getElementById('applyColorBtn');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+        const energySlider = document.getElementById('energySlider');
+        const energyValue = document.getElementById('energyValue');
+        const logEl = document.getElementById('log');
+
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function setConnected(connected) {
+            statusDot.classList.toggle('connected', connected);
+            statusText.textContent = connected ? 'Connected' : 'Disconnected';
+            connectBtn.textContent = connected ? 'Disconnect' : 'Connect to Hoop';
+
+            // Enable/disable controls
+            effectBtns.forEach(btn => btn.disabled = !connected);
+            applyColorBtn.disabled = !connected;
+            presetBtns.forEach(btn => btn.disabled = !connected);
+            energySlider.disabled = !connected;
+        }
+
+        async function connect() {
+            try {
+                log('Scanning for OpenHoop...');
+
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { name: 'OpenHoop' },
+                        { name: 'HulaHoopBLE' }
+                    ],
+                    optionalServices: [SERVICE_UUID, BATTERY_SERVICE]
+                });
+
+                device.addEventListener('gattserverdisconnected', onDisconnected);
+
+                log('Connecting to GATT server...');
+                server = await device.gatt.connect();
+
+                // Get main service and characteristics
+                log('Getting services...');
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                effectChar = await service.getCharacteristic(EFFECT_UUID);
+                colorChar = await service.getCharacteristic(COLOR_UUID);
+                energyChar = await service.getCharacteristic(ENERGY_UUID);
+
+                // Try to get battery service
+                try {
+                    const batteryService = await server.getPrimaryService(BATTERY_SERVICE);
+                    batteryChar = await batteryService.getCharacteristic(BATTERY_LEVEL_UUID);
+                    await batteryChar.startNotifications();
+                    batteryChar.addEventListener('characteristicvaluechanged', onBatteryChanged);
+                    // Read initial battery level
+                    const batteryValue = await batteryChar.readValue();
+                    batteryEl.textContent = `${batteryValue.getUint8(0)}%`;
+                } catch (e) {
+                    log('Battery service not available', 'error');
+                }
+
+                setConnected(true);
+                log('Connected!', 'success');
+
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function disconnect() {
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+            }
+        }
+
+        function onDisconnected() {
+            log('Disconnected');
+            setConnected(false);
+            effectChar = null;
+            colorChar = null;
+            energyChar = null;
+            batteryChar = null;
+            currentEffect = null;
+            effectBtns.forEach(btn => btn.classList.remove('active'));
+        }
+
+        function onBatteryChanged(event) {
+            const value = event.target.value.getUint8(0);
+            batteryEl.textContent = `${value}%`;
+        }
+
+        async function setEffect(effectId) {
+            if (!effectChar) return;
+
+            try {
+                const data = new Uint8Array([effectId]);
+                await effectChar.writeValue(data);
+
+                currentEffect = effectId;
+                effectBtns.forEach(btn => {
+                    btn.classList.toggle('active', parseInt(btn.dataset.effect) === effectId);
+                });
+
+                log(`Effect set to ${effectId}`, 'success');
+            } catch (error) {
+                log(`Failed to set effect: ${error.message}`, 'error');
+            }
+        }
+
+        async function setColor(hexColor) {
+            if (!colorChar) return;
+
+            try {
+                // Send as string (6 characters, no #)
+                const encoder = new TextEncoder();
+                const data = encoder.encode(hexColor);
+                await colorChar.writeValue(data);
+
+                // Clear effect selection since we're using solid color
+                currentEffect = null;
+                effectBtns.forEach(btn => btn.classList.remove('active'));
+
+                log(`Color set to #${hexColor}`, 'success');
+            } catch (error) {
+                log(`Failed to set color: ${error.message}`, 'error');
+            }
+        }
+
+        async function setEnergySaving(level) {
+            if (!energyChar) return;
+
+            try {
+                const data = new Uint8Array([level]);
+                await energyChar.writeValue(data);
+                log(`Energy saving set to ${level}`, 'success');
+            } catch (error) {
+                log(`Failed to set energy saving: ${error.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        connectBtn.addEventListener('click', () => {
+            if (device && device.gatt.connected) {
+                disconnect();
+            } else {
+                connect();
+            }
+        });
+
+        effectBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                setEffect(parseInt(btn.dataset.effect));
+            });
+        });
+
+        applyColorBtn.addEventListener('click', () => {
+            const hex = colorPicker.value.substring(1).toUpperCase();
+            setColor(hex);
+        });
+
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const color = btn.dataset.color;
+                colorPicker.value = '#' + color;
+                setColor(color);
+            });
+        });
+
+        energySlider.addEventListener('input', () => {
+            energyValue.textContent = energySlider.value;
+        });
+
+        energySlider.addEventListener('change', () => {
+            setEnergySaving(parseInt(energySlider.value));
+        });
+
+        // Check Web Bluetooth support
+        if (!navigator.bluetooth) {
+            log('Web Bluetooth not supported! Use Chrome on desktop or Android.', 'error');
+            connectBtn.disabled = true;
+            connectBtn.textContent = 'Bluetooth Not Supported';
+        }
+    </script>
+</body>
+</html>
