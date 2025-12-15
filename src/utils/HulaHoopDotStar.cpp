@@ -10,7 +10,8 @@
  * @license Open-source license.
  */
 
-#include "../../include/utils/HulaHoopDotStar.h"
+// Include Config.h which defines USE_DOTSTAR/USE_NEOPIXEL before including HulaHoopDotStar.h
+#include "../../include/Config.h"
 
 #ifdef USE_DOTSTAR
 /**
