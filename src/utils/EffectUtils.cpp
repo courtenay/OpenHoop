@@ -158,13 +158,8 @@ float EffectUtils::getInclination() {
         return 0.0f;  // Return 0 if read fails
     }
 
-    // Calculate tilt angle from gravity vector
-    // atan2(x, z) gives rotation around Y axis (tilt left/right)
-    // atan2(y, z) gives rotation around X axis (tilt forward/back)
-    auto tiltX = static_cast<float>(atan2(x, z) * RAD_TO_DEG);
-    auto tiltY = static_cast<float>(atan2(y, z) * RAD_TO_DEG);
-
-    // Combine into single angle (0-360)
+    // Calculate tilt angle from gravity vector (0-360 degrees)
+    // Uses X and Y accelerometer values to determine orientation
     float inclination = atan2(y, x) * RAD_TO_DEG;
 
     // Normalize to 0-360 range
