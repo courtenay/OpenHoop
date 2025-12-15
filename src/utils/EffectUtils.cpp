@@ -147,24 +147,30 @@ int EffectUtils::calculateSoundSpectrum() {
 }
 
 /**
- * @brief Get the inclination angle based on gyroscope readings.
- * @return The inclination angle.
+ * @brief Get the inclination angle based on accelerometer readings.
+ * @return The inclination angle (0-360 degrees).
  */
 float EffectUtils::getInclination() {
     float x, y, z;
-    // Read gyroscope values
-    IMU.readGyroscope(x, y, z);
 
-    // Calculate inclination on the X and Y axes
-    auto inclinationX = static_cast<float>(atan2(y, z) * RAD_TO_DEG);
-    auto inclinationY = static_cast<float>(atan2(-x, sqrt(y * y + z * z)) * RAD_TO_DEG);
+    // Read accelerometer values (measures gravity for tilt detection)
+    if (!IMU.readAcceleration(x, y, z)) {
+        return 0.0f;  // Return 0 if read fails
+    }
 
-    // Ensure inclination is in the range [0, 360)
-    inclinationX = static_cast<float>(fmod(inclinationX + 360, 360));
-    inclinationY = static_cast<float>(fmod(inclinationY + 360, 360));
+    // Calculate tilt angle from gravity vector
+    // atan2(x, z) gives rotation around Y axis (tilt left/right)
+    // atan2(y, z) gives rotation around X axis (tilt forward/back)
+    auto tiltX = static_cast<float>(atan2(x, z) * RAD_TO_DEG);
+    auto tiltY = static_cast<float>(atan2(y, z) * RAD_TO_DEG);
 
-    // Average of inclinations on X and Y
-    auto inclination = static_cast<float>((inclinationX + inclinationY) / 2.0);
+    // Combine into single angle (0-360)
+    float inclination = atan2(y, x) * RAD_TO_DEG;
+
+    // Normalize to 0-360 range
+    if (inclination < 0) {
+        inclination += 360.0f;
+    }
 
     return inclination;
 }
