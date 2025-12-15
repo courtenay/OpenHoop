@@ -42,6 +42,8 @@ private:
     int pulseIncrement;      ///< Increment value to dynamically adjust brightness.
     int currentColorIndex;   ///< Index to select the current color from the palette.
     uint32_t colors[5]{};    ///< Array to store the color palette.
+    float pulsePhase;        ///< Phase of the pulse animation (0-360).
+    bool pulseDirection;     ///< Direction of brightness change.
 };
 
 #endif //PULSEEFFECT_H
