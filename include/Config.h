@@ -43,9 +43,9 @@
   #define LEDS_CLOCK_PIN 13  ///< Clock pin for the DotStar LED strip.
   #define LED_COLOR_ORDER DOTSTAR_BGR  ///< Color order for DotStar (BGR is common)
 #elif defined(USE_NEOPIXEL)
-  // NeoPixel (WS2812B) uses 1 pin: data only
+  // NeoPixel (WS2812B/SK6812) uses 1 pin: data only
   #define LEDS_DATA_PIN 4    ///< Data pin for the NeoPixel LED strip (D4).
-  #define LED_COLOR_ORDER NEO_GRB  ///< Color order for NeoPixel (GRB is common)
+  #define LED_COLOR_ORDER NEO_GRBW  ///< Color order for SK6812 RGBW strips
 #else
   #error "You must define either USE_DOTSTAR or USE_NEOPIXEL in Config.h"
 #endif
