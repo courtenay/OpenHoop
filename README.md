@@ -102,9 +102,25 @@ OpenHoop embraces the phenomenon of [Persistence of Vision (POV)](https://en.wik
 Follow these steps to set up and use OpenHoop for your hula hoop performances:
 
 1. **Power on the hula hoop.**
-2. **Connect to the OpenHoop BLE device using a compatible mobile app.** The firmware advertises descriptive GATT services for effect control, live previews, and battery reporting.
+2. **Connect to the OpenHoop BLE device using a BLE scanner app or companion app.** The firmware advertises as "HulaHoopBLE" with descriptive GATT services for effect control, live previews, and battery reporting.
 3. **Customize LED effects, colors, and energy-saving settings.** Presets provide direct links to persistence-of-vision image banks, mic-reactive modes, and per-performance energy profiles.
 4. **Enjoy the mesmerizing light display during your hula hoop performance!**
+
+### App Compatibility
+
+OpenHoop uses a **custom BLE protocol** that is not compatible with commercial LED hoop apps:
+
+| Product | Why Not Compatible |
+|---------|-------------------|
+| **MoodHoops / FutureHoop** | Uses infrared remotes or USB—no Bluetooth support |
+| **Astral Hoops Atomic V** | Uses a proprietary Bluetooth protocol and app |
+| **Hyperion Hoop** | Uses proprietary Bluetooth or WiFi/Art-Net protocols |
+
+**How to control OpenHoop today:**
+- **Generic BLE apps** – Use [nRF Connect](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile) (iOS/Android) or [LightBlue](https://punchthrough.com/lightblue/) to discover the hoop and write to its characteristics manually.
+- **Community companion apps** – Development is underway; contributions welcome!
+
+See the [BLE Protocol Reference](#ble-protocol-reference) below for service UUIDs and characteristic details.
 
 ## BLE Commands
 
@@ -116,6 +132,61 @@ Use the following commands to customize LED effects. Commands can be sent over t
 - `ImageUpload`: Stream new pixel art frames to the controller using run-length encoded payloads.
 - `EnergySavingMode`: Adjust energy-saving mode levels (0 to 3).
 - `SystemStatus`: Query battery percentage, internal temperature, or firmware version.
+
+## BLE Protocol Reference
+
+OpenHoop exposes the following GATT services and characteristics. Use this reference when building companion apps or controlling the hoop with generic BLE tools like nRF Connect.
+
+### Device Information
+- **Device Name:** `HulaHoopBLE`
+- **Manufacturer:** `OpenHoop`
+- **Appearance:** 0x04C0 (LED toys category)
+
+### Services and Characteristics
+
+| Service | UUID | Description |
+|---------|------|-------------|
+| **Hula Hoop Control** | `1815` | Primary control service |
+| **Battery Service** | `180F` | Standard battery reporting |
+| **Device Information** | `180A` | Manufacturer and firmware info |
+| **HID Service** | `1812` | Human Interface Device profile |
+
+#### Hula Hoop Control Service (UUID: 1815)
+
+| Characteristic | UUID | Properties | Description |
+|----------------|------|------------|-------------|
+| **Effect** | `0A92` | Read, Write | LED effect selection (0–8, or 98=Pulse, 99=Spectrum) |
+| **Solid Color** | `0A93` | Read, Write | RGB hex string, e.g., `FF0000` for red |
+| **Energy Saving** | `0A95` | Read, Write | Brightness level 0–8 |
+
+#### Effect Values
+
+| Value | Effect |
+|-------|--------|
+| 0 | Off |
+| 1 | Rainbow |
+| 2 | Color Wave |
+| 3 | Funky |
+| 4 | Rastafari Flag |
+| 5 | Fire |
+| 6 | Leopard Rainbow |
+| 7 | Mushroom (POV image) |
+| 98 | Pulse |
+| 99 | Spectrum |
+
+#### Battery Service (UUID: 180F)
+
+| Characteristic | UUID | Properties | Description |
+|----------------|------|------------|-------------|
+| **Battery Level** | `2A19` | Read, Notify | Battery percentage (0–100) |
+
+### Quick Start with nRF Connect
+
+1. **Scan** for `HulaHoopBLE`
+2. **Connect** and expand the **Hula Hoop Control** service (1815)
+3. **Write** to the Effect characteristic (0A92) – e.g., write `01` for Rainbow
+4. **Write** to Solid Color (0A93) – e.g., write `00FF00` for green
+5. **Subscribe** to Battery Level (2A19) for notifications
 
 ## Documentation
 
