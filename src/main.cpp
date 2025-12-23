@@ -110,8 +110,22 @@ void setup() {
     PDM.onReceive(EffectUtils::onPDMdata);
 
     // Initialize IMU for motion-reactive effects
-    if (!IMU.begin()) {
-        Serial.println("Failed to initialize IMU!");
+    // May need retries on some boards
+    Serial.println("Initializing IMU...");
+    bool imuOk = false;
+    for (int attempt = 0; attempt < 3; attempt++) {
+        if (IMU.begin()) {
+            imuOk = true;
+            Serial.println("IMU initialized successfully!");
+            break;
+        }
+        Serial.print("IMU init attempt ");
+        Serial.print(attempt + 1);
+        Serial.println(" failed, retrying...");
+        delay(100);
+    }
+    if (!imuOk) {
+        Serial.println("WARNING: IMU failed to initialize! Motion effects won't work.");
     }
 
     // Initialize DotStar hoop
