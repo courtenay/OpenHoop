@@ -97,7 +97,7 @@
 #define SOLID_COLOR_DEFAULT_VALUE "NO COLOR"  ///< Default value used for the solid color characteristic.
 #define SOLID_COLOR_MAX_LENGTH 8  ///< Maximum length for the solid color characteristic string.
 #define DEFAULT_EFFECT_VALUE 255  ///< Default value used for the effect characteristic (idle state).
-#define DEFAULT_ENERGY_SAVING_MODE 0  ///< Default energy-saving mode value.
+#define DEFAULT_ENERGY_SAVING_MODE 4  ///< Default energy-saving mode (4 = 50% brightness).
 #define ENERGY_SAVING_MAX_LEVEL 8  ///< Maximum allowed energy-saving mode level.
 #define BLE_DEVICE_APPEARANCE 0x04C0  ///< BLE appearance code for LED toys.
 #define BLE_ADVERTISING_INTERVAL 152  ///< Advertising interval in units of 0.625 ms.
