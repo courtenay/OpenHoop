@@ -387,9 +387,16 @@
         let currentEffect = null;
 
         // Three.js scene
-        let scene, camera, renderer, hoopMesh, arduinoMarker;
+        let scene, camera, renderer, hoopGroup, arduinoMarker;
+        let ledMeshes = [];  // Array of LED segment meshes
+        const NUM_LEDS = 288;
+        const LED_COVERAGE_DEGREES = 360;
+        const ARDUINO_LED_OFFSET_DEGREES = 5;
         let targetRotation = { x: 0, y: 0, z: 0 };
         let currentRotation = { x: 0, y: 0, z: 0 };
+        let currentAccel = { x: 0, y: 0, z: 0 };
+        let ledOffsetAngle = 0;  // Calibrated offset
+        let baselineY = 1.0;     // Assume Y is vertical initially
 
         // DOM elements
         const connectBtn = document.getElementById('connectBtn');
@@ -432,28 +439,46 @@
             renderer.setSize(width, height);
             container.appendChild(renderer.domElement);
 
-            // Hoop (torus)
-            const torusGeometry = new THREE.TorusGeometry(1, 0.03, 16, 100);
-            const torusMaterial = new THREE.MeshPhongMaterial({
-                color: 0x667eea,
-                emissive: 0x334477,
-                shininess: 100
-            });
-            hoopMesh = new THREE.Mesh(torusGeometry, torusMaterial);
-            scene.add(hoopMesh);
+            // Create hoop group to hold all LEDs
+            hoopGroup = new THREE.Group();
+            scene.add(hoopGroup);
+
+            // Create LED segments around the hoop
+            const hoopRadius = 1.0;
+            const ledRadius = 0.04;  // Size of each LED
+            const numVisibleLeds = 72;  // Show fewer LEDs for performance (every 4th)
+
+            for (let i = 0; i < numVisibleLeds; i++) {
+                const angle = (i / numVisibleLeds) * Math.PI * 2;
+                const x = Math.cos(angle) * hoopRadius;
+                const z = Math.sin(angle) * hoopRadius;
+
+                const ledGeometry = new THREE.SphereGeometry(ledRadius, 8, 8);
+                const ledMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                const led = new THREE.Mesh(ledGeometry, ledMaterial);
+                led.position.set(x, 0, z);
+                hoopGroup.add(led);
+                ledMeshes.push(led);
+            }
 
             // Arduino marker (small box on the hoop)
-            const markerGeometry = new THREE.BoxGeometry(0.15, 0.08, 0.05);
-            const markerMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+            const markerGeometry = new THREE.BoxGeometry(0.12, 0.06, 0.04);
+            const markerMaterial = new THREE.MeshPhongMaterial({ color: 0x00aa00 });
             arduinoMarker = new THREE.Mesh(markerGeometry, markerMaterial);
-            arduinoMarker.position.set(1, 0, 0);
-            hoopMesh.add(arduinoMarker);
+            arduinoMarker.position.set(hoopRadius, 0, 0);
+            hoopGroup.add(arduinoMarker);
+
+            // Thin ring for hoop structure
+            const ringGeometry = new THREE.TorusGeometry(hoopRadius, 0.01, 8, 100);
+            const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x444444 });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            hoopGroup.add(ring);
 
             // Lights
-            const ambientLight = new THREE.AmbientLight(0x404040);
+            const ambientLight = new THREE.AmbientLight(0x606060);
             scene.add(ambientLight);
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
             directionalLight.position.set(1, 2, 1);
             scene.add(directionalLight);
 
@@ -469,11 +494,6 @@
             ground.position.y = -1.5;
             scene.add(ground);
 
-            // Axis helper
-            const axesHelper = new THREE.AxesHelper(0.5);
-            axesHelper.position.set(-1.5, -1, -1.5);
-            scene.add(axesHelper);
-
             animate();
         }
 
@@ -485,11 +505,115 @@
             currentRotation.y += (targetRotation.y - currentRotation.y) * 0.1;
             currentRotation.z += (targetRotation.z - currentRotation.z) * 0.1;
 
-            hoopMesh.rotation.x = currentRotation.x;
-            hoopMesh.rotation.y = currentRotation.y;
-            hoopMesh.rotation.z = currentRotation.z;
+            hoopGroup.rotation.x = currentRotation.x;
+            hoopGroup.rotation.y = currentRotation.y;
+            hoopGroup.rotation.z = currentRotation.z;
+
+            // Update LED colors based on current effect
+            updateLEDColors();
 
             renderer.render(scene, camera);
+        }
+
+        // Simulate LED colors based on active effect
+        function updateLEDColors() {
+            const numLeds = ledMeshes.length;
+            const time = Date.now() * 0.001;  // Time in seconds
+
+            for (let i = 0; i < numLeds; i++) {
+                let color = 0x111111;  // Default dim
+
+                if (currentEffect === 95) {
+                    // Water effect - simulate water pooling at bottom
+                    color = getWaterColor(i, numLeds, time);
+                } else if (currentEffect === 1) {
+                    // Rainbow effect
+                    const hue = ((i / numLeds) + time * 0.1) % 1;
+                    color = hslToHex(hue, 1, 0.5);
+                } else if (currentEffect === 5) {
+                    // Fire effect
+                    const flicker = Math.random() * 0.3 + 0.7;
+                    const r = Math.floor(255 * flicker);
+                    const g = Math.floor(80 * flicker * Math.random());
+                    color = (r << 16) | (g << 8);
+                } else if (currentEffect === 96 || currentEffect === 94) {
+                    // Calibration - show sections
+                    const section = Math.floor((i / numLeds) * 4);
+                    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffffff];
+                    color = colors[section];
+                } else if (currentEffect !== null && currentEffect !== 0) {
+                    // Generic colorful effect
+                    const hue = (i / numLeds + time * 0.05) % 1;
+                    color = hslToHex(hue, 0.8, 0.4);
+                }
+
+                ledMeshes[i].material.color.setHex(color);
+            }
+        }
+
+        // Calculate water color for LED at position i
+        function getWaterColor(i, numLeds, time) {
+            // Calculate angle to bottom based on accelerometer
+            // In the hoop's local space, find where gravity points
+            const ax = currentAccel.x;
+            const ay = currentAccel.y;
+            const az = currentAccel.z;
+
+            // Calculate gravity angle in hoop plane (assuming Y is vertical axis)
+            let gravityAngle = Math.atan2(ax, az) * 180 / Math.PI;
+            gravityAngle -= ledOffsetAngle;  // Apply calibration
+            gravityAngle -= ARDUINO_LED_OFFSET_DEGREES;  // Apply hardware offset
+            if (gravityAngle < 0) gravityAngle += 360;
+
+            // Convert LED index to angle
+            const ledAngle = (i / numLeds) * 360;
+
+            // Calculate angular distance from bottom
+            let angleDiff = ledAngle - gravityAngle;
+            if (angleDiff > 180) angleDiff -= 360;
+            if (angleDiff < -180) angleDiff += 360;
+
+            // Water fills bottom 1/4 (90 degrees = 45 degrees each side)
+            const waterHalfAngle = 45;
+            const absAngleDiff = Math.abs(angleDiff);
+
+            if (absAngleDiff <= waterHalfAngle) {
+                // In the water region
+                const distFromCenter = absAngleDiff / waterHalfAngle;
+                const wave = Math.sin(time * 2 + distFromCenter * 3) * 0.15 + 0.85;
+
+                // Color gradient: deep blue center -> cyan edges
+                const r = Math.floor((0 + distFromCenter * 50) * wave);
+                const g = Math.floor((50 + distFromCenter * 100) * wave);
+                const b = Math.floor((150 + distFromCenter * 50) * wave);
+
+                return (r << 16) | (g << 8) | b;
+            }
+
+            return 0x111111;  // Not in water
+        }
+
+        // Helper: HSL to Hex
+        function hslToHex(h, s, l) {
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
         }
 
         function onIMUData(event) {
@@ -502,6 +626,11 @@
             const gx = data.getInt16(6, true) / 10.0;    // Back to deg/s
             const gy = data.getInt16(8, true) / 10.0;
             const gz = data.getInt16(10, true) / 10.0;
+
+            // Store for LED simulation
+            currentAccel.x = ax;
+            currentAccel.y = ay;
+            currentAccel.z = az;
 
             // Update display
             document.getElementById('ax').textContent = ax.toFixed(2) + 'g';
@@ -518,15 +647,11 @@
             document.getElementById('spin').textContent = spin.toFixed(1) + '°/s';
 
             // Calculate orientation from accelerometer only (no drift!)
-            // Accelerometer measures gravity - gives us pitch and roll
-            // Yaw (spin around vertical) cannot be determined from accelerometer alone
             const pitch = Math.atan2(-az, Math.sqrt(ax*ax + ay*ay));
             const roll = Math.atan2(ax, ay);
 
             targetRotation.x = pitch;
             targetRotation.z = roll;
-            // Note: targetRotation.y (yaw) stays at 0 - can't determine from accel
-            // Gyro could track it short-term but will drift, so we skip it
         }
 
         // Initialize Three.js on page load
@@ -636,11 +761,19 @@
                     btn.classList.toggle('active', parseInt(btn.dataset.effect) === effectId);
                 });
 
-                // Reset visualization when calibrating
+                // Handle calibration effects
                 if (effectId === 96) {
+                    // Cal Flat - reset visualization to flat
                     targetRotation = { x: 0, y: 0, z: 0 };
                     currentRotation = { x: 0, y: 0, z: 0 };
-                    log('Calibration started - visualization reset to flat', 'success');
+                    baselineY = currentAccel.y || 1.0;  // Store baseline
+                    log('Cal Flat - visualization reset to flat', 'success');
+                } else if (effectId === 94) {
+                    // Cal LED - capture current gravity angle as LED offset
+                    const ax = currentAccel.x;
+                    const az = currentAccel.z;
+                    ledOffsetAngle = Math.atan2(ax, az) * 180 / Math.PI;
+                    log(`Cal LED - offset captured: ${ledOffsetAngle.toFixed(1)}°`, 'success');
                 }
 
                 log(`Effect set to ${effectId}`, 'success');
