@@ -89,14 +89,17 @@ inline PatternEffect::Config froth() {
     return cfg;
 }
 
-// Distinct colored blobs with gaps
+// Distinct colored blobs with gaps - sound reactive speed
 inline PatternEffect::Config rainbowDash() {
     PatternEffect::Config cfg;
     cfg.colors = {0x00FF00, 0x00FFFF, 0x0088FF, 0xFF00FF};
     cfg.segments = 1;
     cfg.blend = PatternEffect::BlendMode::SOLID;
-    cfg.speed = 0.5f;
+    cfg.speed = 0.2f;               // Lower base speed
     cfg.gapRatio = 0.3f;
+    cfg.soundReactive = true;
+    cfg.soundSpeed = 0.6f;          // Sound speeds it up
+    cfg.soundSmoothing = 0.25f;
     return cfg;
 }
 
