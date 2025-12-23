@@ -1,18 +1,32 @@
 /**
  * @project OpenHoop
  * @file PatternEffect.cpp
- * @brief Implementation of configurable pattern effect.
+ * @brief Implementation of configurable pattern effect with sound reactivity.
  */
 
 #include "../../include/effects/PatternEffect.h"
 #include "../../include/Config.h"
+#include "../../include/utils/EffectUtils.h"
 #include <cmath>
 
+#ifdef FEATURE_SOUND
+#include <PDM.h>
+#endif
+
 PatternEffect::PatternEffect(const Config& cfg)
-    : config(cfg), phase(0.0f) {}
+    : config(cfg), phase(0.0f), smoothedIntensity(0.0f) {}
 
 void PatternEffect::start() {
     phase = 0.0f;
+    smoothedIntensity = 0.0f;
+
+#ifdef FEATURE_SOUND
+    if (config.soundReactive) {
+        // Start PDM microphone at 16kHz mono
+        PDM.begin(1, 16000);
+        DEBUG_PRINTLN("PatternEffect: Sound reactivity enabled");
+    }
+#endif
 }
 
 void PatternEffect::update() {
@@ -24,8 +38,36 @@ void PatternEffect::update() {
 
     int numLeds = hoop.getActivePixels();
 
+    // Get current sound intensity if sound reactive
+    float soundIntensity = 0.0f;
+#ifdef FEATURE_SOUND
+    if (config.soundReactive) {
+        // Get raw intensity (1-10) and normalize to 0-1
+        int rawIntensity = EffectUtils::calculateSoundSpectrum();
+        float targetIntensity = (rawIntensity - 1) / 9.0f;  // Normalize to 0-1
+
+        // Smooth the intensity for less jittery animation
+        smoothedIntensity += (targetIntensity - smoothedIntensity) * config.soundSmoothing;
+        soundIntensity = smoothedIntensity;
+    }
+#endif
+
+    // Calculate effective speed (base + sound modulation)
+    float effectiveSpeed = config.speed;
+    if (config.soundReactive && config.soundSpeed > 0.0f) {
+        effectiveSpeed += soundIntensity * config.soundSpeed;
+    }
+
+    // Calculate effective brightness (base + sound modulation)
+    float effectiveBrightness = config.brightness;
+    if (config.soundReactive && config.soundBrightness > 0.0f) {
+        effectiveBrightness += soundIntensity * config.soundBrightness;
+    }
+    // Clamp brightness to 1.0
+    if (effectiveBrightness > 1.0f) effectiveBrightness = 1.0f;
+
     // Advance animation phase
-    phase += config.speed * 0.01f;
+    phase += effectiveSpeed * 0.01f;
     if (phase >= 1.0f) phase -= 1.0f;
 
     for (int i = 0; i < numLeds; i++) {
@@ -61,10 +103,10 @@ void PatternEffect::update() {
 
         uint32_t color = getColorAt(pos);
 
-        // Apply brightness
-        uint8_t r = ((color >> 16) & 0xFF) * config.brightness;
-        uint8_t g = ((color >> 8) & 0xFF) * config.brightness;
-        uint8_t b = (color & 0xFF) * config.brightness;
+        // Apply effective brightness (base + sound modulation)
+        uint8_t r = ((color >> 16) & 0xFF) * effectiveBrightness;
+        uint8_t g = ((color >> 8) & 0xFF) * effectiveBrightness;
+        uint8_t b = (color & 0xFF) * effectiveBrightness;
 
         hoop.setPixelColor(i, r, g, b);
     }
@@ -73,6 +115,12 @@ void PatternEffect::update() {
 }
 
 void PatternEffect::stop() {
+#ifdef FEATURE_SOUND
+    if (config.soundReactive) {
+        PDM.end();
+        DEBUG_PRINTLN("PatternEffect: Sound reactivity stopped");
+    }
+#endif
     hoop.fill(0);
     hoop.show();
 }

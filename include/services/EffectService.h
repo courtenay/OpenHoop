@@ -23,7 +23,7 @@ enum class EffectType {
     FIRE,
     LEOPARDRAINBOW,
     MUSHROOM,
-    // Pattern presets (80-89)
+    // Pattern presets (80-86)
     PATTERN_LIQUID_SUGAR = 80,
     PATTERN_FROTH = 81,
     PATTERN_RAINBOW_DASH = 82,
@@ -31,6 +31,12 @@ enum class EffectType {
     PATTERN_FLAMEBOW = 84,
     PATTERN_OG_SPARKLES = 85,
     PATTERN_FRUIT_BASKET = 86,
+    // Sound-reactive patterns (87-92)
+    SOUND_PULSE = 87,
+    SOUND_STROBE = 88,
+    SOUND_FIRE = 89,
+    SOUND_WAVES = 90,
+    SOUND_RAINBOW = 91,
     // Special effects (95-99)
     WATER = 95,
     CALIBRATE = 96,      // Two-phase calibration: flat baseline + LED offset

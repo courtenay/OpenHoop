@@ -125,6 +125,22 @@ void EffectService::dispatchEffectCommand(EffectType gesture) {
         case EffectType::PATTERN_FRUIT_BASKET:
             setEffect(std::make_unique<PatternEffect>(Patterns::fruitBasket()));
             break;
+        // Sound-reactive patterns
+        case EffectType::SOUND_PULSE:
+            setEffect(std::make_unique<PatternEffect>(Patterns::soundPulse()));
+            break;
+        case EffectType::SOUND_STROBE:
+            setEffect(std::make_unique<PatternEffect>(Patterns::soundStrobe()));
+            break;
+        case EffectType::SOUND_FIRE:
+            setEffect(std::make_unique<PatternEffect>(Patterns::soundFire()));
+            break;
+        case EffectType::SOUND_WAVES:
+            setEffect(std::make_unique<PatternEffect>(Patterns::soundWaves()));
+            break;
+        case EffectType::SOUND_RAINBOW:
+            setEffect(std::make_unique<PatternEffect>(Patterns::soundRainbow()));
+            break;
         default:
             // Stop the current effect if no matching gesture is found
             setEffect(nullptr);
