@@ -117,24 +117,8 @@ void CalibrateEffect::update() {
             // Show pulsing MAGENTA
             hoop.fill(HulaHoopDotStar::Color(brightness, 0, brightness));
 
-            // Check if tilted and stable
-            // Tilted means the axis that was vertical is now < 0.5g
-            const auto& cal = EffectUtils::getCalibration();
-            float verticalAxis;
-
-            // Find which axis was vertical during flat calibration
-            if (fabs(cal.baselineY) >= fabs(cal.baselineX) && fabs(cal.baselineY) >= fabs(cal.baselineZ)) {
-                verticalAxis = fabs(ay);
-            } else if (fabs(cal.baselineX) >= fabs(cal.baselineY) && fabs(cal.baselineX) >= fabs(cal.baselineZ)) {
-                verticalAxis = fabs(ax);
-            } else {
-                verticalAxis = fabs(az);
-            }
-
-            // Tilted = vertical axis now has little gravity (hoop is on edge)
-            bool isTilted = (verticalAxis < 0.5f) && stableEnough;
-
-            if (isTilted) {
+            // Just need stability - user positions Arduino at bottom
+            if (stableEnough) {
                 // Capture LED offset
                 EffectUtils::calibrateLEDOffset();
 
