@@ -394,7 +394,8 @@ int EffectUtils::calculateSoundSpectrum() {
         DEBUG_PRINTLN(soundIntensity);
 
         // Map the sound intensity to a value between 1 and 10
-        int mappedIntensity = mapRange(soundIntensity, 9999, 29999, 1, 10);
+        // Based on observed values: quiet ~50k, medium ~150k, loud ~300k+
+        int mappedIntensity = mapRange(soundIntensity, 50000, 300000, 1, 10);
 
         DEBUG_PRINT("Mapped Sound Intensity: ");
         DEBUG_PRINTLN(mappedIntensity);
