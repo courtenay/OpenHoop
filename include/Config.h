@@ -12,6 +12,32 @@
 #define OPENHOOP_CONFIG_H
 
 // ============================================================================
+// FEATURE FLAGS - Comment out to disable features and reduce code size
+// ============================================================================
+#define FEATURE_BLE           // Bluetooth Low Energy control
+#define FEATURE_IMU           // IMU for motion-reactive effects (Water, Calibrate)
+#define FEATURE_SOUND         // PDM microphone for sound-reactive effects
+#define FEATURE_SERIAL_DEBUG  // Serial output for debugging (disable in production)
+
+// Production mode: uncomment to disable all debug output
+// #define PRODUCTION_MODE
+
+#ifdef PRODUCTION_MODE
+  #undef FEATURE_SERIAL_DEBUG
+#endif
+
+// Debug print macros - compile to nothing in production
+#ifdef FEATURE_SERIAL_DEBUG
+  #define DEBUG_PRINT(x) Serial.print(x)
+  #define DEBUG_PRINTLN(x) Serial.println(x)
+  #define DEBUG_PRINTF(fmt, ...) Serial.printf(fmt, ##__VA_ARGS__)
+#else
+  #define DEBUG_PRINT(x)
+  #define DEBUG_PRINTLN(x)
+  #define DEBUG_PRINTF(fmt, ...)
+#endif
+
+// ============================================================================
 // LED STRIP TYPE SELECTION
 // ============================================================================
 // Uncomment ONE of the following to select your LED strip type:

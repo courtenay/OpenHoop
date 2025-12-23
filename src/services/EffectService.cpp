@@ -20,9 +20,12 @@
 #include "../../include/effects/RainbowLeopardEffect.h"
 #include "../../include/effects/MushroomImageEffect.h"
 #include "../../include/effects/POVEffect.h"
+#include "../../include/effects/PatternEffect.h"
+
+#ifdef FEATURE_IMU
 #include "../../include/effects/CalibrateEffect.h"
 #include "../../include/effects/WaterEffect.h"
-#include "../../include/effects/PatternEffect.h"
+#endif
 #include "../../include/Config.h"
 
 /**
@@ -92,12 +95,14 @@ void EffectService::dispatchEffectCommand(EffectType gesture) {
         case EffectType::POV:
             setEffect(std::make_unique<POVEffect>());
             break;
+#ifdef FEATURE_IMU
         case EffectType::CALIBRATE:
             setEffect(std::make_unique<CalibrateEffect>());
             break;
         case EffectType::WATER:
             setEffect(std::make_unique<WaterEffect>());
             break;
+#endif
         // Pattern presets
         case EffectType::PATTERN_LIQUID_SUGAR:
             setEffect(std::make_unique<PatternEffect>(Patterns::liquidSugar()));
@@ -134,7 +139,7 @@ void EffectService::dispatchEffectCommand(EffectType gesture) {
 void EffectService::dispatchSolidColorCommand(const String& colorString) {
     // Handle potential errors gracefully:
     if (colorString.length() != 6) {
-        Serial.println("Invalid color code length (must be 6 characters)");
+        DEBUG_PRINTLN("Invalid color code length (must be 6 characters)");
         setEffect(std::make_unique<SolidColorFillEffect>(HulaHoopDotStar::Color(0, 0, 0))); // Set default color in case of error
         return;
     }
@@ -145,10 +150,10 @@ void EffectService::dispatchSolidColorCommand(const String& colorString) {
     uint8_t blue = strtol(colorString.substring(4, 6).c_str(), nullptr, 16);
 
     // Log the extracted RGB values (for debugging purposes):
-    Serial.print("Extracted RGB values: ");
-    Serial.print("Red: "); Serial.print(red); Serial.print(", ");
-    Serial.print("Green: "); Serial.print(green); Serial.print(", ");
-    Serial.print("Blue: "); Serial.println(blue);
+    DEBUG_PRINT("Extracted RGB values: ");
+    DEBUG_PRINT("Red: "); DEBUG_PRINT(red); DEBUG_PRINT(", ");
+    DEBUG_PRINT("Green: "); DEBUG_PRINT(green); DEBUG_PRINT(", ");
+    DEBUG_PRINT("Blue: "); DEBUG_PRINTLN(blue);
 
     // Create and set the solid color effect:
     setEffect(std::make_unique<SolidColorFillEffect>(HulaHoopDotStar::Color(red, green, blue)));

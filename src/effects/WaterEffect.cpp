@@ -14,8 +14,8 @@ WaterEffect::WaterEffect() : smoothedAngle(0), wavePhase(0) {}
 void WaterEffect::start() {
     smoothedAngle = 0;
     wavePhase = 0;
-    Serial.println("=== Water Effect Started ===");
-    Serial.println("Simulating water that flows to bottom of hoop");
+    DEBUG_PRINTLN("=== Water Effect Started ===");
+    DEBUG_PRINTLN("Simulating water that flows to bottom of hoop");
 }
 
 void WaterEffect::update() {

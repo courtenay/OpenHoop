@@ -24,8 +24,8 @@ void POVEffect::start() {
     currentAngle = 0.0f;
     lastUpdateTime = millis();
     currentPattern = 0;  // Start with heart
-    Serial.println("POV Effect started - demo mode");
-    Serial.println("Patterns: 0=Heart, 1=Spiral, 2=Text");
+    DEBUG_PRINTLN("POV Effect started - demo mode");
+    DEBUG_PRINTLN("Patterns: 0=Heart, 1=Spiral, 2=Text");
 }
 
 void POVEffect::update() {

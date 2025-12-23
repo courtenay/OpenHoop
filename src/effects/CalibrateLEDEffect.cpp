@@ -12,9 +12,9 @@ void CalibrateLEDEffect::start() {
     calibrated = false;
     startTime = millis();
 
-    Serial.println("=== LED Offset Calibration ===");
-    Serial.println("Hold hoop VERTICAL with Arduino at BOTTOM!");
-    Serial.println("Calibrating in 2 seconds...");
+    DEBUG_PRINTLN("=== LED Offset Calibration ===");
+    DEBUG_PRINTLN("Hold hoop VERTICAL with Arduino at BOTTOM!");
+    DEBUG_PRINTLN("Calibrating in 2 seconds...");
 
     // Show a visual indicator - red pulsing
     hoop.fill(HulaHoopDotStar::Color(50, 0, 0));
@@ -33,8 +33,8 @@ void CalibrateLEDEffect::update() {
         hoop.fill(HulaHoopDotStar::Color(0, 100, 0));
         hoop.show();
 
-        Serial.println("LED offset calibration complete!");
-        Serial.println("Water effect should now align correctly.");
+        DEBUG_PRINTLN("LED offset calibration complete!");
+        DEBUG_PRINTLN("Water effect should now align correctly.");
     }
 
     if (!calibrated) {

@@ -154,13 +154,13 @@ void EffectUtils::calibrateIMU() {
     calibration.baselineZ = sumZ / samples;
     calibration.isCalibrated = true;
 
-    Serial.println("=== IMU Calibrated ===");
-    Serial.print("Baseline - X: ");
-    Serial.print(calibration.baselineX, 3);
-    Serial.print(" Y: ");
-    Serial.print(calibration.baselineY, 3);
-    Serial.print(" Z: ");
-    Serial.println(calibration.baselineZ, 3);
+    DEBUG_PRINTLN("=== IMU Calibrated ===");
+    DEBUG_PRINT("Baseline - X: ");
+    DEBUG_PRINT(calibration.baselineX);
+    DEBUG_PRINT(" Y: ");
+    DEBUG_PRINT(calibration.baselineY);
+    DEBUG_PRINT(" Z: ");
+    DEBUG_PRINTLN(calibration.baselineZ);
 }
 
 /**
@@ -218,10 +218,10 @@ void EffectUtils::calibrateLEDOffset() {
     // Store this as the offset - when gravity points this direction, Arduino is at bottom
     calibration.ledOffsetAngle = angle;
 
-    Serial.println("=== LED Offset Calibrated ===");
-    Serial.print("Offset angle: ");
-    Serial.print(calibration.ledOffsetAngle, 1);
-    Serial.println(" degrees");
+    DEBUG_PRINTLN("=== LED Offset Calibrated ===");
+    DEBUG_PRINT("Offset angle: ");
+    DEBUG_PRINT(calibration.ledOffsetAngle);
+    DEBUG_PRINTLN(" degrees");
 
     // Auto-save to flash after calibration
     saveCalibration();
@@ -232,7 +232,7 @@ void EffectUtils::calibrateLEDOffset() {
  */
 void EffectUtils::saveCalibration() {
     if (!calibration.isCalibrated) {
-        Serial.println("No calibration to save");
+        DEBUG_PRINTLN("No calibration to save");
         return;
     }
 
@@ -261,7 +261,7 @@ void EffectUtils::saveCalibration() {
 
     flash.deinit();
 
-    Serial.println("Calibration saved to flash");
+    DEBUG_PRINTLN("Calibration saved to flash");
 }
 
 /**
@@ -285,12 +285,12 @@ bool EffectUtils::loadCalibration() {
 
     // Validate magic number and checksum
     if (storage.magic != CALIBRATION_MAGIC) {
-        Serial.println("No saved calibration found");
+        DEBUG_PRINTLN("No saved calibration found");
         return false;
     }
 
     if (storage.checksum != calculateChecksum(storage)) {
-        Serial.println("Calibration data corrupted");
+        DEBUG_PRINTLN("Calibration data corrupted");
         return false;
     }
 
@@ -301,16 +301,16 @@ bool EffectUtils::loadCalibration() {
     calibration.ledOffsetAngle = storage.ledOffsetAngle;
     calibration.isCalibrated = true;
 
-    Serial.println("=== Calibration Loaded from Flash ===");
-    Serial.print("Baseline - X: ");
-    Serial.print(calibration.baselineX, 3);
-    Serial.print(" Y: ");
-    Serial.print(calibration.baselineY, 3);
-    Serial.print(" Z: ");
-    Serial.println(calibration.baselineZ, 3);
-    Serial.print("LED Offset: ");
-    Serial.print(calibration.ledOffsetAngle, 1);
-    Serial.println(" degrees");
+    DEBUG_PRINTLN("=== Calibration Loaded from Flash ===");
+    DEBUG_PRINT("Baseline - X: ");
+    DEBUG_PRINT(calibration.baselineX);
+    DEBUG_PRINT(" Y: ");
+    DEBUG_PRINT(calibration.baselineY);
+    DEBUG_PRINT(" Z: ");
+    DEBUG_PRINTLN(calibration.baselineZ);
+    DEBUG_PRINT("LED Offset: ");
+    DEBUG_PRINT(calibration.ledOffsetAngle);
+    DEBUG_PRINTLN(" degrees");
 
     return true;
 }
@@ -377,8 +377,8 @@ void EffectUtils::onPDMdata() {
 int EffectUtils::calculateSoundSpectrum() {
     // Wait for samples to be read
     if (samplesRead) {
-        Serial.print("Samples Read: ");
-        Serial.println(samplesRead);
+        DEBUG_PRINT("Samples Read: ");
+        DEBUG_PRINTLN(samplesRead);
 
         int soundIntensity = 0;
 
@@ -390,19 +390,19 @@ int EffectUtils::calculateSoundSpectrum() {
         // Clear the read count
         samplesRead = 0;
 
-        Serial.print("Total Sound Intensity: ");
-        Serial.println(soundIntensity);
+        DEBUG_PRINT("Total Sound Intensity: ");
+        DEBUG_PRINTLN(soundIntensity);
 
         // Map the sound intensity to a value between 1 and 10
         int mappedIntensity = mapRange(soundIntensity, 9999, 29999, 1, 10);
 
-        Serial.print("Mapped Sound Intensity: ");
-        Serial.println(mappedIntensity);
+        DEBUG_PRINT("Mapped Sound Intensity: ");
+        DEBUG_PRINTLN(mappedIntensity);
 
         return mappedIntensity;
     }
 
-    Serial.println("No Samples Read");
+    DEBUG_PRINTLN("No Samples Read");
     return 0;  // Return 0 if no samples are read
 }
 

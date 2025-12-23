@@ -11,11 +11,15 @@
 
 #include <Arduino.h>
 #include <nrf.h>
+#include "../include/Config.h"  // Must be first for feature flags
+
+#ifdef FEATURE_IMU
 #include <Arduino_LSM9DS1.h>
+#endif
+
 #include "../include/services/BleService.h"
 #include "../include/services/EffectService.h"
 #include "../include/utils/EffectUtils.h"
-#include "../include/Config.h"
 
 namespace {
 constexpr unsigned long kBatteryUpdateIntervalMs = 1000UL;
@@ -34,7 +38,9 @@ constexpr uint8_t kInactivityBrightnessLevel = static_cast<uint8_t>((255U * 30U 
 unsigned long lastBatteryUpdateMs = 0;
 unsigned long lastBleActivityMs = 0;
 unsigned long lastEffectUpdateMs = 0;
+#ifdef FEATURE_IMU
 unsigned long lastIMUUpdateMs = 0;
+#endif
 bool isCentralConnected = false;
 bool inactivityDimmed = false;
 uint8_t storedEnergySavingModeLevel = DEFAULT_ENERGY_SAVING_MODE;
@@ -86,7 +92,9 @@ void handleInactivity();
 void applyInactivityDimming();
 void restoreFromInactivityDim();
 void enterDeepSleep();
+#ifdef FEATURE_IMU
 void updateIMU();
+#endif
 } // namespace
 
 // Instantiate the LED strip based on configuration
@@ -110,32 +118,36 @@ void setup() {
 
     seedRandomGenerator();
 
+#ifdef FEATURE_SOUND
     // Initialize the PDM library for sound processing
     PDM.onReceive(EffectUtils::onPDMdata);
+#endif
 
+#ifdef FEATURE_IMU
     // Initialize IMU for motion-reactive effects
     // May need retries on some boards
-    Serial.println("Initializing IMU...");
+    DEBUG_PRINTLN("Initializing IMU...");
     bool imuOk = false;
     for (int attempt = 0; attempt < 3; attempt++) {
         if (IMU.begin()) {
             imuOk = true;
-            Serial.println("IMU initialized successfully!");
+            DEBUG_PRINTLN("IMU initialized successfully!");
             break;
         }
-        Serial.print("IMU init attempt ");
-        Serial.print(attempt + 1);
-        Serial.println(" failed, retrying...");
+        DEBUG_PRINT("IMU init attempt ");
+        DEBUG_PRINT(attempt + 1);
+        DEBUG_PRINTLN(" failed, retrying...");
         delay(100);
     }
     if (!imuOk) {
-        Serial.println("WARNING: IMU failed to initialize! Motion effects won't work.");
+        DEBUG_PRINTLN("WARNING: IMU failed to initialize! Motion effects won't work.");
     }
 
     // Load saved calibration from flash (if available)
     if (EffectUtils::loadCalibration()) {
-        Serial.println("Previous calibration restored");
+        DEBUG_PRINTLN("Previous calibration restored");
     }
+#endif
 
     // Initialize DotStar hoop
     hoop.begin();
@@ -314,6 +326,7 @@ void enterDeepSleep() {
     }
 }
 
+#ifdef FEATURE_IMU
 void updateIMU() {
     const unsigned long now = millis();
     if ((now - lastIMUUpdateMs) < kIMUUpdateIntervalMs) {
@@ -328,6 +341,7 @@ void updateIMU() {
         bleService.updateIMUData(ax, ay, az, gx, gy, gz);
     }
 }
+#endif
 
 } // namespace
 
@@ -338,8 +352,10 @@ void loop() {
     // Update battery level based on analog reading
     updateBatteryLevel();
 
+#ifdef FEATURE_IMU
     // Stream IMU data to BLE (for visualization)
     updateIMU();
+#endif
 
     // Update LED effects
     updateEffects();

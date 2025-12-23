@@ -23,14 +23,14 @@ void CalibrateEffect::start() {
     stableStartTime = 0;
     isStable = false;
 
-    Serial.println("");
-    Serial.println("========================================");
-    Serial.println("=== TWO-PHASE CALIBRATION STARTING ===");
-    Serial.println("========================================");
-    Serial.println("");
-    Serial.println("PHASE 1: Place hoop FLAT on the ground");
-    Serial.println("         (CYAN pulsing = waiting)");
-    Serial.println("");
+    DEBUG_PRINTLN("");
+    DEBUG_PRINTLN("========================================");
+    DEBUG_PRINTLN("=== TWO-PHASE CALIBRATION STARTING ===");
+    DEBUG_PRINTLN("========================================");
+    DEBUG_PRINTLN("");
+    DEBUG_PRINTLN("PHASE 1: Place hoop FLAT on the ground");
+    DEBUG_PRINTLN("         (CYAN pulsing = waiting)");
+    DEBUG_PRINTLN("");
 }
 
 void CalibrateEffect::update() {
@@ -66,14 +66,14 @@ void CalibrateEffect::update() {
     // Print status periodically
     if (now - lastPrintTime > 500) {
         lastPrintTime = now;
-        Serial.print("Accel: X=");
-        Serial.print(ax, 2);
-        Serial.print(" Y=");
-        Serial.print(ay, 2);
-        Serial.print(" Z=");
-        Serial.print(az, 2);
-        Serial.print(" | Stable: ");
-        Serial.println(stableEnough ? "YES" : "no");
+        DEBUG_PRINT("Accel: X=");
+        DEBUG_PRINT(ax);
+        DEBUG_PRINT(" Y=");
+        DEBUG_PRINT(ay);
+        DEBUG_PRINT(" Z=");
+        DEBUG_PRINT(az);
+        DEBUG_PRINT(" | Stable: ");
+        DEBUG_PRINTLN(stableEnough ? "YES" : "no");
     }
 
     switch (currentPhase) {
@@ -100,15 +100,15 @@ void CalibrateEffect::update() {
                 isStable = false;
                 stableStartTime = 0;
 
-                Serial.println("");
-                Serial.println("========================================");
-                Serial.println("PHASE 1 COMPLETE!");
-                Serial.println("========================================");
-                Serial.println("");
-                Serial.println("PHASE 2: Hold hoop VERTICAL");
-                Serial.println("         Arduino should be at the BOTTOM");
-                Serial.println("         (MAGENTA pulsing = waiting)");
-                Serial.println("");
+                DEBUG_PRINTLN("");
+                DEBUG_PRINTLN("========================================");
+                DEBUG_PRINTLN("PHASE 1 COMPLETE!");
+                DEBUG_PRINTLN("========================================");
+                DEBUG_PRINTLN("");
+                DEBUG_PRINTLN("PHASE 2: Hold hoop VERTICAL");
+                DEBUG_PRINTLN("         Arduino should be at the BOTTOM");
+                DEBUG_PRINTLN("         (MAGENTA pulsing = waiting)");
+                DEBUG_PRINTLN("");
             }
             break;
         }
@@ -126,14 +126,14 @@ void CalibrateEffect::update() {
                 currentPhase = Phase::DONE;
                 phaseStartTime = now;
 
-                Serial.println("");
-                Serial.println("========================================");
-                Serial.println("CALIBRATION COMPLETE!");
-                Serial.println("========================================");
-                Serial.println("");
-                Serial.println("Water effect should now align correctly.");
-                Serial.println("You can now select another effect.");
-                Serial.println("");
+                DEBUG_PRINTLN("");
+                DEBUG_PRINTLN("========================================");
+                DEBUG_PRINTLN("CALIBRATION COMPLETE!");
+                DEBUG_PRINTLN("========================================");
+                DEBUG_PRINTLN("");
+                DEBUG_PRINTLN("Water effect should now align correctly.");
+                DEBUG_PRINTLN("You can now select another effect.");
+                DEBUG_PRINTLN("");
             }
             break;
         }
@@ -151,5 +151,5 @@ void CalibrateEffect::update() {
 void CalibrateEffect::stop() {
     hoop.fill(0);
     hoop.show();
-    Serial.println("=== Calibration Mode Ended ===");
+    DEBUG_PRINTLN("=== Calibration Mode Ended ===");
 }
