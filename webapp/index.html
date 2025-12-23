@@ -516,17 +516,16 @@
             document.getElementById('tilt').textContent = tilt.toFixed(1) + '°';
             document.getElementById('spin').textContent = spin.toFixed(1) + '°/s';
 
-            // Calculate orientation for 3D visualization
-            // pitch = rotation around X (tilt forward/back)
-            // roll = rotation around Z (tilt left/right)
-            const pitch = Math.atan2(az, ay);
+            // Calculate orientation from accelerometer only (no drift!)
+            // Accelerometer measures gravity - gives us pitch and roll
+            // Yaw (spin around vertical) cannot be determined from accelerometer alone
+            const pitch = Math.atan2(-az, Math.sqrt(ax*ax + ay*ay));
             const roll = Math.atan2(ax, ay);
 
             targetRotation.x = pitch;
             targetRotation.z = roll;
-
-            // Use gyro Z for yaw (spin) - integrate over time
-            targetRotation.y += gz * 0.001;
+            // Note: targetRotation.y (yaw) stays at 0 - can't determine from accel
+            // Gyro could track it short-term but will drift, so we skip it
         }
 
         // Initialize Three.js on page load
