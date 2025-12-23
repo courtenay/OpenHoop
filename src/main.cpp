@@ -53,12 +53,10 @@ constexpr EffectType kBootEffects[] = {
 };
 
 constexpr bool isValidEffect(uint8_t effectValue) {
+    // 0-7: Standard effects (NO_EFFECT through MUSHROOM)
+    // 95-99: Special effects (WATER, CALIBRATE, POV, PULSE, SPECTRUM)
     return (effectValue <= static_cast<uint8_t>(EffectType::MUSHROOM)) ||
-           (effectValue == static_cast<uint8_t>(EffectType::WATER)) ||
-           (effectValue == static_cast<uint8_t>(EffectType::CALIBRATE)) ||
-           (effectValue == static_cast<uint8_t>(EffectType::POV)) ||
-           (effectValue == static_cast<uint8_t>(EffectType::PULSE)) ||
-           (effectValue == static_cast<uint8_t>(EffectType::SPECTRUM));
+           (effectValue >= 95 && effectValue <= 99);
 }
 
 uint8_t clampEnergySavingLevel(uint8_t level) {
