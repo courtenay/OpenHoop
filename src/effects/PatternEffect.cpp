@@ -6,6 +6,7 @@
 
 #include "../../include/effects/PatternEffect.h"
 #include "../../include/Config.h"
+#include <cmath>
 
 PatternEffect::PatternEffect(const Config& cfg)
     : config(cfg), phase(0.0f) {}
