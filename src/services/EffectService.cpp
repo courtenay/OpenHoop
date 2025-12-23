@@ -22,6 +22,7 @@
 #include "../../include/effects/POVEffect.h"
 #include "../../include/effects/CalibrateEffect.h"
 #include "../../include/effects/WaterEffect.h"
+#include "../../include/effects/PatternEffect.h"
 #include "../../include/Config.h"
 
 /**
@@ -96,6 +97,28 @@ void EffectService::dispatchEffectCommand(EffectType gesture) {
             break;
         case EffectType::WATER:
             setEffect(std::make_unique<WaterEffect>());
+            break;
+        // Pattern presets
+        case EffectType::PATTERN_LIQUID_SUGAR:
+            setEffect(std::make_unique<PatternEffect>(Patterns::liquidSugar()));
+            break;
+        case EffectType::PATTERN_FROTH:
+            setEffect(std::make_unique<PatternEffect>(Patterns::froth()));
+            break;
+        case EffectType::PATTERN_RAINBOW_DASH:
+            setEffect(std::make_unique<PatternEffect>(Patterns::rainbowDash()));
+            break;
+        case EffectType::PATTERN_FIREBALL:
+            setEffect(std::make_unique<PatternEffect>(Patterns::fireball()));
+            break;
+        case EffectType::PATTERN_FLAMEBOW:
+            setEffect(std::make_unique<PatternEffect>(Patterns::flamebow()));
+            break;
+        case EffectType::PATTERN_OG_SPARKLES:
+            setEffect(std::make_unique<PatternEffect>(Patterns::ogSparkles()));
+            break;
+        case EffectType::PATTERN_FRUIT_BASKET:
+            setEffect(std::make_unique<PatternEffect>(Patterns::fruitBasket()));
             break;
         default:
             // Stop the current effect if no matching gesture is found

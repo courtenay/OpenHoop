@@ -23,6 +23,15 @@ enum class EffectType {
     FIRE,
     LEOPARDRAINBOW,
     MUSHROOM,
+    // Pattern presets (80-89)
+    PATTERN_LIQUID_SUGAR = 80,
+    PATTERN_FROTH = 81,
+    PATTERN_RAINBOW_DASH = 82,
+    PATTERN_FIREBALL = 83,
+    PATTERN_FLAMEBOW = 84,
+    PATTERN_OG_SPARKLES = 85,
+    PATTERN_FRUIT_BASKET = 86,
+    // Special effects (95-99)
     WATER = 95,
     CALIBRATE = 96,      // Two-phase calibration: flat baseline + LED offset
     POV = 97,

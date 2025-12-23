@@ -54,8 +54,10 @@ constexpr EffectType kBootEffects[] = {
 
 constexpr bool isValidEffect(uint8_t effectValue) {
     // 0-7: Standard effects (NO_EFFECT through MUSHROOM)
+    // 80-89: Pattern presets
     // 95-99: Special effects (WATER, CALIBRATE, POV, PULSE, SPECTRUM)
     return (effectValue <= static_cast<uint8_t>(EffectType::MUSHROOM)) ||
+           (effectValue >= 80 && effectValue <= 89) ||
            (effectValue >= 95 && effectValue <= 99);
 }
 
