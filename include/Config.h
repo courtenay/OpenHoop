@@ -53,6 +53,7 @@
 // Bluetooth's configuration.
 #define EFFECT_SERVICE_UUID "0A92"  ///< UUID for the effect service.
 #define SCOLOR_SERVICE_UUID "0A93"  ///< UUID for the solid color service.
+#define IMU_SERVICE_UUID "0A94"     ///< UUID for the IMU data stream.
 #define ENERGY_SERVICE_UUID "0A95"  ///< UUID for the energy saving service.
 #define SOLID_COLOR_DEFAULT_VALUE "NO COLOR"  ///< Default value used for the solid color characteristic.
 #define SOLID_COLOR_MAX_LENGTH 8  ///< Maximum length for the solid color characteristic string.

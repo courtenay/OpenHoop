@@ -39,9 +39,17 @@ public:
      */
     void updateBatteryLevel(float voltage);
 
+    /**
+     * @brief Updates the IMU data characteristic with current sensor values.
+     * @param ax, ay, az - Accelerometer values in g
+     * @param gx, gy, gz - Gyroscope values in deg/s
+     */
+    void updateIMUData(float ax, float ay, float az, float gx, float gy, float gz);
+
     BLEByteCharacteristic effectCharacteristic;  ///< Effect characteristic for BLE.
     BLEStringCharacteristic solidColorCharacteristic;  ///< Solid color characteristic for BLE.
     BLEByteCharacteristic energySavingModeCharacteristic;  ///< Energy-saving mode characteristic.
+    BLECharacteristic imuCharacteristic;  ///< IMU data stream characteristic (12 bytes: 6 x int16).
 
     /**
      * @brief Resets controllable characteristics to their default values.

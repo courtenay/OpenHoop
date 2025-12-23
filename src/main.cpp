@@ -19,6 +19,7 @@
 
 namespace {
 constexpr unsigned long kBatteryUpdateIntervalMs = 1000UL;
+constexpr unsigned long kIMUUpdateIntervalMs = 50UL;  // 20Hz IMU streaming
 constexpr uint8_t kBatterySampleCount = BATTERY_SAMPLE_COUNT;
 constexpr float kAdcToVoltage = REF_VOLTAGE / BATTERY_MAX_READING;
 constexpr float kVoltageDividerRatio = (R1 + R2) / R2;
@@ -33,6 +34,7 @@ constexpr uint8_t kInactivityBrightnessLevel = static_cast<uint8_t>((255U * 30U 
 unsigned long lastBatteryUpdateMs = 0;
 unsigned long lastBleActivityMs = 0;
 unsigned long lastEffectUpdateMs = 0;
+unsigned long lastIMUUpdateMs = 0;
 bool isCentralConnected = false;
 bool inactivityDimmed = false;
 uint8_t storedEnergySavingModeLevel = DEFAULT_ENERGY_SAVING_MODE;
@@ -83,6 +85,7 @@ void handleInactivity();
 void applyInactivityDimming();
 void restoreFromInactivityDim();
 void enterDeepSleep();
+void updateIMU();
 } // namespace
 
 // Instantiate the LED strip based on configuration
@@ -305,6 +308,21 @@ void enterDeepSleep() {
     }
 }
 
+void updateIMU() {
+    const unsigned long now = millis();
+    if ((now - lastIMUUpdateMs) < kIMUUpdateIntervalMs) {
+        return;
+    }
+    lastIMUUpdateMs = now;
+
+    float ax, ay, az, gx, gy, gz;
+    if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
+        IMU.readAcceleration(ax, ay, az);
+        IMU.readGyroscope(gx, gy, gz);
+        bleService.updateIMUData(ax, ay, az, gx, gy, gz);
+    }
+}
+
 } // namespace
 
 void loop() {
@@ -313,6 +331,9 @@ void loop() {
 
     // Update battery level based on analog reading
     updateBatteryLevel();
+
+    // Stream IMU data to BLE (for visualization)
+    updateIMU();
 
     // Update LED effects
     updateEffects();

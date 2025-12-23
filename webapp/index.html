@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OpenHoop Controller</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -251,6 +252,34 @@
         .log-entry.success {
             color: #51cf66;
         }
+
+        #imuViz {
+            width: 100%;
+            height: 250px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .imu-data {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+            font-family: monospace;
+            font-size: 0.85em;
+        }
+
+        .imu-data div {
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .imu-label {
+            opacity: 0.6;
+            font-size: 0.8em;
+        }
     </style>
 </head>
 <body>
@@ -266,6 +295,21 @@
         </div>
 
         <button id="connectBtn">Connect to Hoop</button>
+
+        <div class="section">
+            <h2>IMU Visualization</h2>
+            <div id="imuViz"></div>
+            <div class="imu-data">
+                <div><span class="imu-label">Accel X:</span> <span id="ax">--</span></div>
+                <div><span class="imu-label">Accel Y:</span> <span id="ay">--</span></div>
+                <div><span class="imu-label">Accel Z:</span> <span id="az">--</span></div>
+                <div><span class="imu-label">Tilt:</span> <span id="tilt">--</span></div>
+                <div><span class="imu-label">Gyro X:</span> <span id="gx">--</span></div>
+                <div><span class="imu-label">Gyro Y:</span> <span id="gy">--</span></div>
+                <div><span class="imu-label">Gyro Z:</span> <span id="gz">--</span></div>
+                <div><span class="imu-label">Spin:</span> <span id="spin">--</span></div>
+            </div>
+        </div>
 
         <div class="section">
             <h2>Effects</h2>
@@ -325,6 +369,7 @@
         const SERVICE_UUID = 0x1815; // Automation IO Service
         const EFFECT_UUID = 0x0A92;
         const COLOR_UUID = 0x0A93;
+        const IMU_UUID = 0x0A94;
         const ENERGY_UUID = 0x0A95;
         const BATTERY_SERVICE = 0x180F;
         const BATTERY_LEVEL_UUID = 0x2A19;
@@ -335,8 +380,14 @@
         let effectChar = null;
         let colorChar = null;
         let energyChar = null;
+        let imuChar = null;
         let batteryChar = null;
         let currentEffect = null;
+
+        // Three.js scene
+        let scene, camera, renderer, hoopMesh, arduinoMarker;
+        let targetRotation = { x: 0, y: 0, z: 0 };
+        let currentRotation = { x: 0, y: 0, z: 0 };
 
         // DOM elements
         const connectBtn = document.getElementById('connectBtn');
@@ -358,6 +409,127 @@
             logEl.appendChild(entry);
             logEl.scrollTop = logEl.scrollHeight;
         }
+
+        // Initialize Three.js scene
+        function initThreeJS() {
+            const container = document.getElementById('imuViz');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+            camera.position.set(0, 2, 3);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            container.appendChild(renderer.domElement);
+
+            // Hoop (torus)
+            const torusGeometry = new THREE.TorusGeometry(1, 0.03, 16, 100);
+            const torusMaterial = new THREE.MeshPhongMaterial({
+                color: 0x667eea,
+                emissive: 0x334477,
+                shininess: 100
+            });
+            hoopMesh = new THREE.Mesh(torusGeometry, torusMaterial);
+            scene.add(hoopMesh);
+
+            // Arduino marker (small box on the hoop)
+            const markerGeometry = new THREE.BoxGeometry(0.15, 0.08, 0.05);
+            const markerMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+            arduinoMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+            arduinoMarker.position.set(1, 0, 0);
+            hoopMesh.add(arduinoMarker);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 2, 1);
+            scene.add(directionalLight);
+
+            // Ground plane (shows "down" direction)
+            const groundGeometry = new THREE.PlaneGeometry(4, 4);
+            const groundMaterial = new THREE.MeshPhongMaterial({
+                color: 0x333355,
+                transparent: true,
+                opacity: 0.3
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -1.5;
+            scene.add(ground);
+
+            // Axis helper
+            const axesHelper = new THREE.AxesHelper(0.5);
+            axesHelper.position.set(-1.5, -1, -1.5);
+            scene.add(axesHelper);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Smooth interpolation to target rotation
+            currentRotation.x += (targetRotation.x - currentRotation.x) * 0.1;
+            currentRotation.y += (targetRotation.y - currentRotation.y) * 0.1;
+            currentRotation.z += (targetRotation.z - currentRotation.z) * 0.1;
+
+            hoopMesh.rotation.x = currentRotation.x;
+            hoopMesh.rotation.y = currentRotation.y;
+            hoopMesh.rotation.z = currentRotation.z;
+
+            renderer.render(scene, camera);
+        }
+
+        function onIMUData(event) {
+            const data = new DataView(event.target.value.buffer);
+
+            // Unpack 6 x int16 values
+            const ax = data.getInt16(0, true) / 1000.0;  // Back to g
+            const ay = data.getInt16(2, true) / 1000.0;
+            const az = data.getInt16(4, true) / 1000.0;
+            const gx = data.getInt16(6, true) / 10.0;    // Back to deg/s
+            const gy = data.getInt16(8, true) / 10.0;
+            const gz = data.getInt16(10, true) / 10.0;
+
+            // Update display
+            document.getElementById('ax').textContent = ax.toFixed(2) + 'g';
+            document.getElementById('ay').textContent = ay.toFixed(2) + 'g';
+            document.getElementById('az').textContent = az.toFixed(2) + 'g';
+            document.getElementById('gx').textContent = gx.toFixed(1) + '°/s';
+            document.getElementById('gy').textContent = gy.toFixed(1) + '°/s';
+            document.getElementById('gz').textContent = gz.toFixed(1) + '°/s';
+
+            // Calculate tilt angle from gravity
+            const tilt = Math.atan2(Math.sqrt(ax*ax + az*az), ay) * 180 / Math.PI;
+            const spin = Math.sqrt(gx*gx + gy*gy + gz*gz);
+            document.getElementById('tilt').textContent = tilt.toFixed(1) + '°';
+            document.getElementById('spin').textContent = spin.toFixed(1) + '°/s';
+
+            // Calculate orientation for 3D visualization
+            // pitch = rotation around X (tilt forward/back)
+            // roll = rotation around Z (tilt left/right)
+            const pitch = Math.atan2(az, ay);
+            const roll = Math.atan2(ax, ay);
+
+            targetRotation.x = pitch;
+            targetRotation.z = roll;
+
+            // Use gyro Z for yaw (spin) - integrate over time
+            targetRotation.y += gz * 0.001;
+        }
+
+        // Initialize Three.js on page load
+        initThreeJS();
 
         function setConnected(connected) {
             statusDot.classList.toggle('connected', connected);
@@ -396,6 +568,16 @@
                 colorChar = await service.getCharacteristic(COLOR_UUID);
                 energyChar = await service.getCharacteristic(ENERGY_UUID);
 
+                // Get IMU characteristic and subscribe to notifications
+                try {
+                    imuChar = await service.getCharacteristic(IMU_UUID);
+                    await imuChar.startNotifications();
+                    imuChar.addEventListener('characteristicvaluechanged', onIMUData);
+                    log('IMU streaming enabled', 'success');
+                } catch (e) {
+                    log('IMU characteristic not available', 'error');
+                }
+
                 // Try to get battery service
                 try {
                     const batteryService = await server.getPrimaryService(BATTERY_SERVICE);
@@ -430,6 +612,7 @@
             effectChar = null;
             colorChar = null;
             energyChar = null;
+            imuChar = null;
             batteryChar = null;
             currentEffect = null;
             effectBtns.forEach(btn => btn.classList.remove('active'));

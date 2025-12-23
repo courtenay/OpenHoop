@@ -29,6 +29,7 @@ BleService::BleService():
         effectCharacteristic(EFFECT_SERVICE_UUID, BLERead | BLEWrite),
         solidColorCharacteristic(SCOLOR_SERVICE_UUID, BLERead | BLEWrite, SOLID_COLOR_VALUE_SIZE),
         energySavingModeCharacteristic(ENERGY_SERVICE_UUID, BLERead | BLEWrite),
+        imuCharacteristic(IMU_SERVICE_UUID, BLERead | BLENotify, 12),
         hulaHoopService("1812"),
         reportDescriptor("2908", "04 0B 00 0B 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
         reportMapCharacteristic("2A4B", BLERead | BLENotify),
@@ -74,6 +75,7 @@ bool BleService::beginAndAdvertise() {
     solidColorCharacteristic.writeValue(SOLID_COLOR_DEFAULT_VALUE);
     hulaHoopControlService.addCharacteristic(energySavingModeCharacteristic);
     energySavingModeCharacteristic.writeValue(DEFAULT_ENERGY_SAVING_MODE);
+    hulaHoopControlService.addCharacteristic(imuCharacteristic);
     deviceInformationService.addCharacteristic(pnpIdCharacteristic);
     deviceInformationService.addCharacteristic(manufacturerCharacteristic);
     deviceInformationService.addCharacteristic(modelCharacteristic);
@@ -126,4 +128,19 @@ void BleService::resetControlCharacteristics() {
     effectCharacteristic.writeValue(DEFAULT_EFFECT_VALUE);
     solidColorCharacteristic.writeValue(SOLID_COLOR_DEFAULT_VALUE);
     energySavingModeCharacteristic.writeValue(DEFAULT_ENERGY_SAVING_MODE);
+}
+
+void BleService::updateIMUData(float ax, float ay, float az, float gx, float gy, float gz) {
+    // Pack IMU data as 6 x int16 (12 bytes total)
+    // Accelerometer: scaled by 1000 (1.0g = 1000)
+    // Gyroscope: scaled by 10 (100 deg/s = 1000)
+    int16_t data[6];
+    data[0] = static_cast<int16_t>(ax * 1000.0f);
+    data[1] = static_cast<int16_t>(ay * 1000.0f);
+    data[2] = static_cast<int16_t>(az * 1000.0f);
+    data[3] = static_cast<int16_t>(gx * 10.0f);
+    data[4] = static_cast<int16_t>(gy * 10.0f);
+    data[5] = static_cast<int16_t>(gz * 10.0f);
+
+    imuCharacteristic.writeValue(reinterpret_cast<uint8_t*>(data), 12);
 }
