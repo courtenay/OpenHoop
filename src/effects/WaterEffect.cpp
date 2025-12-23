@@ -8,7 +8,6 @@
 #include "../../include/effects/WaterEffect.h"
 #include "../../include/Config.h"
 #include "../../include/utils/EffectUtils.h"
-#include <Arduino_LSM9DS1.h>
 
 WaterEffect::WaterEffect() : smoothedAngle(0), wavePhase(0) {}
 
@@ -20,44 +19,8 @@ void WaterEffect::start() {
 }
 
 void WaterEffect::update() {
-    float ax, ay, az;
-
-    if (!IMU.accelerationAvailable() || !IMU.readAcceleration(ax, ay, az)) {
-        return;
-    }
-
-    // Get calibration to determine which axis is vertical
-    const auto& cal = EffectUtils::getCalibration();
-
-    // Determine the angle around the hoop where "down" is
-    // The hoop lies in a plane. We need to find where gravity points
-    // relative to the Arduino's position on the hoop.
-    //
-    // If calibrated: use baseline to determine which plane the hoop is in
-    // The "bottom" is where the gravity vector intersects the hoop circle
-
-    float targetAngle;
-
-    if (cal.isCalibrated) {
-        // Find which axis had max baseline (vertical when calibrated)
-        float absBaseX = fabs(cal.baselineX);
-        float absBaseY = fabs(cal.baselineY);
-        float absBaseZ = fabs(cal.baselineZ);
-
-        if (absBaseY >= absBaseX && absBaseY >= absBaseZ) {
-            // Y was vertical at calibration, hoop plane is X-Z
-            targetAngle = atan2(ax, az) * RAD_TO_DEG;
-        } else if (absBaseX >= absBaseY && absBaseX >= absBaseZ) {
-            // X was vertical at calibration, hoop plane is Y-Z
-            targetAngle = atan2(ay, az) * RAD_TO_DEG;
-        } else {
-            // Z was vertical at calibration, hoop plane is X-Y
-            targetAngle = atan2(ax, ay) * RAD_TO_DEG;
-        }
-    } else {
-        // No calibration - assume Y is vertical (common orientation)
-        targetAngle = atan2(ax, az) * RAD_TO_DEG;
-    }
+    // Get the angle to the bottom of the hoop (handles calibration offset)
+    float targetAngle = EffectUtils::getBottomAngle();
 
     // Smooth the angle to reduce jitter
     float angleDiff = targetAngle - smoothedAngle;
@@ -69,15 +32,10 @@ void WaterEffect::update() {
     // Normalize to 0-360
     float normalizedAngle = smoothedAngle;
     if (normalizedAngle < 0) normalizedAngle += 360;
-
-    // Convert angle to LED position
-    // Angle 0 = Arduino position, so we need to offset by 180 to find "bottom"
-    // when Arduino is at top
-    float bottomAngle = normalizedAngle + 180;
-    if (bottomAngle >= 360) bottomAngle -= 360;
+    if (normalizedAngle >= 360) normalizedAngle -= 360;
 
     int numLeds = hoop.getActivePixels();
-    int centerLed = static_cast<int>((bottomAngle / 360.0f) * numLeds) % numLeds;
+    int centerLed = static_cast<int>((normalizedAngle / 360.0f) * numLeds) % numLeds;
 
     // Water fills bottom 1/4 of the hoop
     int waterLeds = static_cast<int>(numLeds * WATER_FILL);

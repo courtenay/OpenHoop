@@ -16,15 +16,16 @@
 #include <PDM.h>
 
 /**
- * @brief IMU calibration data - stores baseline orientation.
+ * @brief IMU calibration data - stores baseline orientation and LED mapping.
  */
 struct IMUCalibration {
     float baselineX;      // Gravity X when "flat"
     float baselineY;      // Gravity Y when "flat"
     float baselineZ;      // Gravity Z when "flat"
+    float ledOffsetAngle; // Angle offset to map IMU coords to LED positions (degrees)
     bool isCalibrated;    // Has calibration been performed?
 
-    IMUCalibration() : baselineX(0), baselineY(0), baselineZ(0), isCalibrated(false) {}
+    IMUCalibration() : baselineX(0), baselineY(0), baselineZ(0), ledOffsetAngle(0), isCalibrated(false) {}
 };
 
 /**
@@ -47,6 +48,19 @@ public:
      * @brief Get calibration data (for display/debugging).
      */
     static const IMUCalibration& getCalibration();
+
+    /**
+     * @brief Calibrate LED offset angle.
+     * Call this when hoop is tilted/vertical with Arduino at the BOTTOM.
+     * This captures the current gravity angle as the reference for LED position 0.
+     */
+    static void calibrateLEDOffset();
+
+    /**
+     * @brief Get the angle to the bottom of the hoop (in LED index space).
+     * @return Angle in degrees (0-360) that maps to LED positions.
+     */
+    static float getBottomAngle();
     /**
      * @brief Apply brightness to a color.
      * @param color Original color value.

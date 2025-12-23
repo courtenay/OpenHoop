@@ -23,8 +23,9 @@ enum class EffectType {
     FIRE,
     LEOPARDRAINBOW,
     MUSHROOM,
+    CALIBRATE_LED = 94,  // Calibrate LED offset (hold vertical, Arduino at bottom)
     WATER = 95,
-    CALIBRATE = 96,
+    CALIBRATE = 96,      // Calibrate IMU baseline (hold flat)
     POV = 97,
     PULSE = 98,
     SPECTRUM = 99,

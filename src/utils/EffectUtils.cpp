@@ -148,6 +148,93 @@ const IMUCalibration& EffectUtils::getCalibration() {
 }
 
 /**
+ * @brief Calibrate LED offset - call when hoop is vertical with Arduino at BOTTOM.
+ * This captures the current gravity angle as the reference for "bottom" = Arduino position.
+ */
+void EffectUtils::calibrateLEDOffset() {
+    float x, y, z;
+
+    // Average multiple readings for stability
+    float sumX = 0, sumY = 0, sumZ = 0;
+    const int samples = 10;
+
+    for (int i = 0; i < samples; i++) {
+        if (IMU.readAcceleration(x, y, z)) {
+            sumX += x;
+            sumY += y;
+            sumZ += z;
+        }
+        delay(10);
+    }
+
+    x = sumX / samples;
+    y = sumY / samples;
+    z = sumZ / samples;
+
+    // Calculate the current gravity angle in the hoop plane
+    float angle;
+    float absBaseX = fabs(calibration.baselineX);
+    float absBaseY = fabs(calibration.baselineY);
+    float absBaseZ = fabs(calibration.baselineZ);
+
+    if (absBaseY >= absBaseX && absBaseY >= absBaseZ) {
+        angle = atan2(x, z) * RAD_TO_DEG;
+    } else if (absBaseX >= absBaseY && absBaseX >= absBaseZ) {
+        angle = atan2(y, z) * RAD_TO_DEG;
+    } else {
+        angle = atan2(x, y) * RAD_TO_DEG;
+    }
+
+    // Store this as the offset - when gravity points this direction, Arduino is at bottom
+    calibration.ledOffsetAngle = angle;
+
+    Serial.println("=== LED Offset Calibrated ===");
+    Serial.print("Offset angle: ");
+    Serial.print(calibration.ledOffsetAngle, 1);
+    Serial.println(" degrees");
+}
+
+/**
+ * @brief Get the angle to the bottom of the hoop in LED index space.
+ * @return Angle in degrees (0-360) where 0 = LED at Arduino position.
+ */
+float EffectUtils::getBottomAngle() {
+    float x, y, z;
+
+    if (!IMU.accelerationAvailable() || !IMU.readAcceleration(x, y, z)) {
+        return 0.0f;
+    }
+
+    // Calculate current gravity angle in hoop plane
+    float angle;
+    float absBaseX = fabs(calibration.baselineX);
+    float absBaseY = fabs(calibration.baselineY);
+    float absBaseZ = fabs(calibration.baselineZ);
+
+    if (calibration.isCalibrated) {
+        if (absBaseY >= absBaseX && absBaseY >= absBaseZ) {
+            angle = atan2(x, z) * RAD_TO_DEG;
+        } else if (absBaseX >= absBaseY && absBaseX >= absBaseZ) {
+            angle = atan2(y, z) * RAD_TO_DEG;
+        } else {
+            angle = atan2(x, y) * RAD_TO_DEG;
+        }
+    } else {
+        // Fallback: assume Y is vertical
+        angle = atan2(x, z) * RAD_TO_DEG;
+    }
+
+    // Subtract the offset to get angle relative to Arduino position
+    float relativeAngle = angle - calibration.ledOffsetAngle;
+
+    // Normalize to 0-360
+    if (relativeAngle < 0) relativeAngle += 360.0f;
+    if (relativeAngle >= 360.0f) relativeAngle -= 360.0f;
+
+    return relativeAngle;
+}
+
+/**
  * @brief Callback function for PDM data.
  * Reads PDM data into the sample buffer.
  */
