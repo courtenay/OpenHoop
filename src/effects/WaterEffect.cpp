@@ -34,8 +34,13 @@ void WaterEffect::update() {
     if (normalizedAngle < 0) normalizedAngle += 360;
     if (normalizedAngle >= 360) normalizedAngle -= 360;
 
+    // Apply Arduino-to-LED offset and scale for LED coverage
+    float adjustedAngle = normalizedAngle - ARDUINO_LED_OFFSET_DEGREES;
+    if (adjustedAngle < 0) adjustedAngle += 360;
+    if (adjustedAngle >= 360) adjustedAngle -= 360;
+
     int numLeds = hoop.getActivePixels();
-    int centerLed = static_cast<int>((normalizedAngle / 360.0f) * numLeds) % numLeds;
+    int centerLed = static_cast<int>((adjustedAngle / LED_COVERAGE_DEGREES) * numLeds) % numLeds;
 
     // Water fills bottom 1/4 of the hoop
     int waterLeds = static_cast<int>(numLeds * WATER_FILL);

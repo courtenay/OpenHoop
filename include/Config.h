@@ -37,6 +37,10 @@
 // ============================================================================
 #define NUM_LEDS 288  ///< Number of LEDs in the hoop.
 
+// LED geometry - adjust based on physical hoop layout
+#define LED_COVERAGE_DEGREES 360.0f   ///< Degrees of circle covered by LEDs (set to actual coverage if gap exists)
+#define ARDUINO_LED_OFFSET_DEGREES 5.0f ///< Angular offset from Arduino to LED #1
+
 #ifdef USE_DOTSTAR
   // DotStar (APA102) uses 2 pins: data + clock
   #define LEDS_DATA_PIN 11   ///< Data pin for the DotStar LED strip.
