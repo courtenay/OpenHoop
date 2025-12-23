@@ -27,7 +27,7 @@ void WaterEffect::update() {
     // Handle wrap-around at 180/-180
     if (angleDiff > 180) angleDiff -= 360;
     if (angleDiff < -180) angleDiff += 360;
-    smoothedAngle += angleDiff * 0.15f;  // Smoothing factor
+    smoothedAngle += angleDiff * 0.05f;  // Slower smoothing for calmer motion
 
     // Normalize to 0-360
     float normalizedAngle = smoothedAngle;
@@ -46,8 +46,8 @@ void WaterEffect::update() {
     int waterLeds = static_cast<int>(numLeds * WATER_FILL);
     int halfWater = waterLeds / 2;
 
-    // Wave animation
-    wavePhase += 0.1f;
+    // Wave animation - gentle and slow
+    wavePhase += 0.03f;
     if (wavePhase > TWO_PI) wavePhase -= TWO_PI;
 
     // Clear all LEDs first
@@ -60,8 +60,8 @@ void WaterEffect::update() {
         // Calculate distance from center for gradient
         float distFromCenter = fabs(static_cast<float>(i)) / halfWater;
 
-        // Wave effect - slight variation in brightness
-        float wave = sin(wavePhase + distFromCenter * 3.0f) * 0.15f + 0.85f;
+        // Wave effect - subtle variation in brightness
+        float wave = sin(wavePhase + distFromCenter * 2.0f) * 0.08f + 0.92f;
 
         // Color gradient: deeper blue in center, lighter at edges
         // Center: deep blue (0, 50, 150)
@@ -75,15 +75,12 @@ void WaterEffect::update() {
         g = static_cast<uint8_t>(g * wave);
         b = static_cast<uint8_t>(b * wave);
 
-        // Add white sparkles near surface (blend into RGB since no W channel)
-        if (distFromCenter > 0.7f) {
-            float sparkle = sin(wavePhase * 3 + ledIndex * 0.5f);
-            if (sparkle > 0.8f) {
-                uint8_t sparkleAmount = static_cast<uint8_t>((sparkle - 0.8f) * 5 * 80);
-                r = min(255, r + sparkleAmount);
-                g = min(255, g + sparkleAmount);
-                b = min(255, b + sparkleAmount);
-            }
+        // Subtle highlight near edges (no sparkles, just gentle glow)
+        if (distFromCenter > 0.8f) {
+            float edgeGlow = (distFromCenter - 0.8f) * 5.0f;  // 0 to 1 at edge
+            r = min(255, static_cast<int>(r + edgeGlow * 30));
+            g = min(255, static_cast<int>(g + edgeGlow * 40));
+            b = min(255, static_cast<int>(b + edgeGlow * 20));
         }
 
         hoop.setPixelColor(ledIndex, r, g, b);
