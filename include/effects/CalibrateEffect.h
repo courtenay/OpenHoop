@@ -1,8 +1,7 @@
 /**
  * @project OpenHoop
  * @file CalibrateEffect.h
- * @brief IMU calibration/diagnostic effect.
- * @details Visualizes IMU data to help understand sensor orientation.
+ * @brief Two-phase IMU and LED calibration effect.
  */
 
 #ifndef OPENHOOP_CALIBRATEEFFECT_H
@@ -11,13 +10,17 @@
 #include "Effect.h"
 
 /**
- * @brief Diagnostic effect that visualizes IMU sensor data.
+ * @brief Two-phase calibration effect.
  *
- * Divides the LED strip into sections showing:
- * - Accelerometer X, Y, Z (for tilt/gravity direction)
- * - Gyroscope magnitude (for spin detection)
+ * Phase 1 (CYAN pulsing): Place hoop FLAT on ground
+ *   - Captures which axis is gravity (vertical)
+ *   - Auto-detects when stable and flat
  *
- * This helps identify which physical axis corresponds to which sensor axis.
+ * Phase 2 (MAGENTA pulsing): Hold hoop VERTICAL with Arduino at BOTTOM
+ *   - Captures LED offset angle for water/gravity effects
+ *   - Auto-detects when tilted and stable
+ *
+ * GREEN flash = phase complete, SOLID GREEN = all done
  */
 class CalibrateEffect : public Effect {
 public:
@@ -28,7 +31,16 @@ public:
     void stop() override;
 
 private:
+    enum class Phase { FLAT, LED_OFFSET, DONE };
+    Phase currentPhase;
+    unsigned long phaseStartTime;
     unsigned long lastPrintTime;
+    unsigned long stableStartTime;
+    bool isStable;
+
+    static constexpr float STABILITY_THRESHOLD = 0.05f;  // Max allowed acceleration change
+    static constexpr unsigned long STABLE_DURATION_MS = 1000;  // Must be stable for 1 second
+    static constexpr float TILT_THRESHOLD = 0.7f;  // Min tilt to detect vertical position
 };
 
 #endif //OPENHOOP_CALIBRATEEFFECT_H

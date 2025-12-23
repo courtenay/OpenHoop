@@ -1,7 +1,7 @@
 /**
  * @project OpenHoop
  * @file CalibrateEffect.cpp
- * @brief IMU calibration/diagnostic effect implementation.
+ * @brief Two-phase IMU and LED calibration effect.
  */
 
 #include "../../include/effects/CalibrateEffect.h"
@@ -9,47 +9,61 @@
 #include "../../include/utils/EffectUtils.h"
 #include <Arduino_LSM9DS1.h>
 
-CalibrateEffect::CalibrateEffect() : lastPrintTime(0) {}
+CalibrateEffect::CalibrateEffect()
+    : currentPhase(Phase::FLAT)
+    , phaseStartTime(0)
+    , lastPrintTime(0)
+    , stableStartTime(0)
+    , isStable(false) {}
 
 void CalibrateEffect::start() {
+    currentPhase = Phase::FLAT;
+    phaseStartTime = millis();
     lastPrintTime = 0;
-    Serial.println("=== IMU Calibration Mode ===");
-    Serial.println("Capturing baseline orientation...");
-
-    // Capture baseline - this tells the system what "flat" looks like
-    EffectUtils::calibrateIMU();
+    stableStartTime = 0;
+    isStable = false;
 
     Serial.println("");
-    Serial.println("Baseline captured! LED sections now show:");
-    Serial.println("  RED section   = Accelerometer X");
-    Serial.println("  GREEN section = Accelerometer Y");
-    Serial.println("  BLUE section  = Accelerometer Z");
-    Serial.println("  WHITE section = Gyroscope spin magnitude");
+    Serial.println("========================================");
+    Serial.println("=== TWO-PHASE CALIBRATION STARTING ===");
+    Serial.println("========================================");
     Serial.println("");
-    Serial.println("Tilt the hoop to see colors change!");
+    Serial.println("PHASE 1: Place hoop FLAT on the ground");
+    Serial.println("         (CYAN pulsing = waiting)");
+    Serial.println("");
 }
 
 void CalibrateEffect::update() {
-    float ax, ay, az;  // Accelerometer (g-force, ~1.0 = gravity)
-    float gx, gy, gz;  // Gyroscope (degrees/second)
+    float ax, ay, az;
+    static float lastAx = 0, lastAy = 0, lastAz = 0;
 
-    // Read sensors
-    bool accelOk = IMU.readAcceleration(ax, ay, az);
-    bool gyroOk = IMU.readGyroscope(gx, gy, gz);
-
-    if (!accelOk || !gyroOk) {
-        // Flash red if IMU read fails
+    if (!IMU.readAcceleration(ax, ay, az)) {
         hoop.fill(HulaHoopDotStar::Color(255, 0, 0));
         hoop.show();
-        Serial.println("IMU read failed!");
         return;
     }
 
-    // Calculate spin magnitude from gyroscope
-    float spinMagnitude = sqrt(gx * gx + gy * gy + gz * gz);
-
-    // Print to serial every 500ms for debugging
     unsigned long now = millis();
+    float pulse = (sin(now * 0.005f) + 1.0f) * 0.5f;
+    uint8_t brightness = static_cast<uint8_t>(50 + pulse * 150);
+
+    // Check stability (acceleration not changing much)
+    float delta = fabs(ax - lastAx) + fabs(ay - lastAy) + fabs(az - lastAz);
+    lastAx = ax; lastAy = ay; lastAz = az;
+
+    if (delta < STABILITY_THRESHOLD) {
+        if (!isStable) {
+            isStable = true;
+            stableStartTime = now;
+        }
+    } else {
+        isStable = false;
+        stableStartTime = 0;
+    }
+
+    bool stableEnough = isStable && (now - stableStartTime > STABLE_DURATION_MS);
+
+    // Print status periodically
     if (now - lastPrintTime > 500) {
         lastPrintTime = now;
         Serial.print("Accel: X=");
@@ -58,55 +72,101 @@ void CalibrateEffect::update() {
         Serial.print(ay, 2);
         Serial.print(" Z=");
         Serial.print(az, 2);
-        Serial.print(" | Gyro: X=");
-        Serial.print(gx, 1);
-        Serial.print(" Y=");
-        Serial.print(gy, 1);
-        Serial.print(" Z=");
-        Serial.print(gz, 1);
-        Serial.print(" | Spin=");
-        Serial.println(spinMagnitude, 1);
+        Serial.print(" | Stable: ");
+        Serial.println(stableEnough ? "YES" : "no");
     }
 
-    // Divide LEDs into 4 equal sections
-    int numLeds = hoop.getActivePixels();
-    int sectionSize = numLeds / 4;
+    switch (currentPhase) {
+        case Phase::FLAT: {
+            // Show pulsing CYAN
+            hoop.fill(HulaHoopDotStar::Color(0, brightness, brightness));
 
-    // Map accelerometer values (-1 to +1 g) to brightness
-    // Base brightness of 30 so something is always visible
-    // Full gravity (1g) = full brightness (255)
-    uint8_t baseB = 30;
-    uint8_t brightnessX = static_cast<uint8_t>(baseB + min(225.0f, abs(ax) * 225.0f));
-    uint8_t brightnessY = static_cast<uint8_t>(baseB + min(225.0f, abs(ay) * 225.0f));
-    uint8_t brightnessZ = static_cast<uint8_t>(baseB + min(225.0f, abs(az) * 225.0f));
+            // Check if flat and stable
+            // Flat means one axis has most of gravity (~1g), others are near 0
+            float maxAxis = max(max(fabs(ax), fabs(ay)), fabs(az));
+            bool isFlat = (maxAxis > 0.8f) && stableEnough;
 
-    // Gyro: map 0-500 deg/s to brightness, base of 30
-    uint8_t brightnessSpin = static_cast<uint8_t>(baseB + min(225.0f, spinMagnitude / 2.2f));
+            if (isFlat) {
+                // Capture flat baseline
+                EffectUtils::calibrateIMU();
 
-    // Section 1: RED = X axis (solid color, no gradient)
-    for (int i = 0; i < sectionSize; i++) {
-        hoop.setPixelColor(i, brightnessX, 0, 0);
-    }
+                // Flash green briefly
+                hoop.fill(HulaHoopDotStar::Color(0, 255, 0));
+                hoop.show();
+                delay(500);
 
-    // Section 2: GREEN = Y axis
-    for (int i = sectionSize; i < sectionSize * 2; i++) {
-        hoop.setPixelColor(i, 0, brightnessY, 0);
-    }
+                // Move to phase 2
+                currentPhase = Phase::LED_OFFSET;
+                phaseStartTime = now;
+                isStable = false;
+                stableStartTime = 0;
 
-    // Section 3: BLUE = Z axis
-    for (int i = sectionSize * 2; i < sectionSize * 3; i++) {
-        hoop.setPixelColor(i, 0, 0, brightnessZ);
-    }
+                Serial.println("");
+                Serial.println("========================================");
+                Serial.println("PHASE 1 COMPLETE!");
+                Serial.println("========================================");
+                Serial.println("");
+                Serial.println("PHASE 2: Hold hoop VERTICAL");
+                Serial.println("         Arduino should be at the BOTTOM");
+                Serial.println("         (MAGENTA pulsing = waiting)");
+                Serial.println("");
+            }
+            break;
+        }
 
-    // Section 4: WHITE = Spin magnitude (gyroscope)
-    for (int i = sectionSize * 3; i < numLeds; i++) {
-        hoop.setPixelColor(i, brightnessSpin, brightnessSpin, brightnessSpin);
+        case Phase::LED_OFFSET: {
+            // Show pulsing MAGENTA
+            hoop.fill(HulaHoopDotStar::Color(brightness, 0, brightness));
+
+            // Check if tilted and stable
+            // Tilted means the axis that was vertical is now < 0.5g
+            const auto& cal = EffectUtils::getCalibration();
+            float verticalAxis;
+
+            // Find which axis was vertical during flat calibration
+            if (fabs(cal.baselineY) >= fabs(cal.baselineX) && fabs(cal.baselineY) >= fabs(cal.baselineZ)) {
+                verticalAxis = fabs(ay);
+            } else if (fabs(cal.baselineX) >= fabs(cal.baselineY) && fabs(cal.baselineX) >= fabs(cal.baselineZ)) {
+                verticalAxis = fabs(ax);
+            } else {
+                verticalAxis = fabs(az);
+            }
+
+            // Tilted = vertical axis now has little gravity (hoop is on edge)
+            bool isTilted = (verticalAxis < 0.5f) && stableEnough;
+
+            if (isTilted) {
+                // Capture LED offset
+                EffectUtils::calibrateLEDOffset();
+
+                // Move to done
+                currentPhase = Phase::DONE;
+                phaseStartTime = now;
+
+                Serial.println("");
+                Serial.println("========================================");
+                Serial.println("CALIBRATION COMPLETE!");
+                Serial.println("========================================");
+                Serial.println("");
+                Serial.println("Water effect should now align correctly.");
+                Serial.println("You can now select another effect.");
+                Serial.println("");
+            }
+            break;
+        }
+
+        case Phase::DONE: {
+            // Solid green - all done!
+            hoop.fill(HulaHoopDotStar::Color(0, 150, 0));
+            break;
+        }
     }
 
     hoop.show();
 }
 
 void CalibrateEffect::stop() {
-    hoop.fill(HulaHoopDotStar::Color(0, 0, 0));
+    hoop.fill(0);
+    hoop.show();
     Serial.println("=== Calibration Mode Ended ===");
 }

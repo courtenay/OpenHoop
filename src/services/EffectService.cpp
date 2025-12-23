@@ -21,7 +21,6 @@
 #include "../../include/effects/MushroomImageEffect.h"
 #include "../../include/effects/POVEffect.h"
 #include "../../include/effects/CalibrateEffect.h"
-#include "../../include/effects/CalibrateLEDEffect.h"
 #include "../../include/effects/WaterEffect.h"
 #include "../../include/Config.h"
 
@@ -94,9 +93,6 @@ void EffectService::dispatchEffectCommand(EffectType gesture) {
             break;
         case EffectType::CALIBRATE:
             setEffect(std::make_unique<CalibrateEffect>());
-            break;
-        case EffectType::CALIBRATE_LED:
-            setEffect(std::make_unique<CalibrateLEDEffect>());
             break;
         case EffectType::WATER:
             setEffect(std::make_unique<WaterEffect>());

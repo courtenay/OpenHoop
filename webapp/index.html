@@ -322,9 +322,8 @@
                 <button class="effect-btn" data-effect="5" disabled>Fire</button>
                 <button class="effect-btn" data-effect="6" disabled>Leopard</button>
                 <button class="effect-btn" data-effect="7" disabled>Mushroom</button>
-                <button class="effect-btn" data-effect="94" disabled>Cal LED</button>
                 <button class="effect-btn" data-effect="95" disabled>Water</button>
-                <button class="effect-btn" data-effect="96" disabled>Cal Flat</button>
+                <button class="effect-btn" data-effect="96" disabled>Calibrate</button>
                 <button class="effect-btn" data-effect="97" disabled>POV</button>
                 <button class="effect-btn" data-effect="98" disabled>Pulse</button>
                 <button class="effect-btn" data-effect="99" disabled>Spectrum</button>
@@ -397,6 +396,7 @@
         let currentAccel = { x: 0, y: 0, z: 0 };
         let ledOffsetAngle = 0;  // Calibrated offset
         let baselineY = 1.0;     // Assume Y is vertical initially
+        let calibrationPhase = null;  // 'flat', 'led_offset', or null
 
         // DOM elements
         const connectBtn = document.getElementById('connectBtn');
@@ -536,11 +536,21 @@
                     const r = Math.floor(255 * flicker);
                     const g = Math.floor(80 * flicker * Math.random());
                     color = (r << 16) | (g << 8);
-                } else if (currentEffect === 96 || currentEffect === 94) {
-                    // Calibration - show sections
-                    const section = Math.floor((i / numLeds) * 4);
-                    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffffff];
-                    color = colors[section];
+                } else if (currentEffect === 96) {
+                    // Calibration - simulate phase colors (CYAN = flat phase, MAGENTA = LED offset phase)
+                    // Since we can't know the actual phase, pulse between cyan and magenta
+                    const pulse = (Math.sin(time * 2) + 1) / 2;  // 0 to 1
+                    const brightness = Math.floor(50 + pulse * 150);
+                    if (calibrationPhase === 'flat') {
+                        // CYAN pulsing - phase 1
+                        color = (brightness << 8) | brightness;  // 0x00FFFF-ish
+                    } else if (calibrationPhase === 'led_offset') {
+                        // MAGENTA pulsing - phase 2
+                        color = (brightness << 16) | brightness;  // 0xFF00FF-ish
+                    } else {
+                        // Default: show CYAN
+                        color = (brightness << 8) | brightness;
+                    }
                 } else if (currentEffect !== null && currentEffect !== 0) {
                     // Generic colorful effect
                     const hue = (i / numLeds + time * 0.05) % 1;
@@ -652,6 +662,20 @@
 
             targetRotation.x = pitch;
             targetRotation.z = roll;
+
+            // Detect calibration phase transitions based on tilt
+            if (calibrationPhase === 'flat') {
+                // Detect if hoop is now tilted (vertical) - transition to phase 2
+                // Tilted means the vertical axis now has little gravity (< 0.5g)
+                const verticalAxis = Math.abs(ay);  // Assuming Y was vertical when flat
+                if (verticalAxis < 0.5) {
+                    calibrationPhase = 'led_offset';
+                    // Capture LED offset angle when Arduino is at bottom
+                    ledOffsetAngle = Math.atan2(ax, az) * 180 / Math.PI;
+                    log('Phase 2 detected - Hold VERTICAL with Arduino at BOTTOM (MAGENTA)', 'success');
+                    log(`LED offset captured: ${ledOffsetAngle.toFixed(1)}°`, 'info');
+                }
+            }
         }
 
         // Initialize Three.js on page load
@@ -761,19 +785,19 @@
                     btn.classList.toggle('active', parseInt(btn.dataset.effect) === effectId);
                 });
 
-                // Handle calibration effects
+                // Handle calibration effect
                 if (effectId === 96) {
-                    // Cal Flat - reset visualization to flat
+                    // Two-phase calibration:
+                    // Phase 1 (CYAN): Place hoop flat - captures baseline
+                    // Phase 2 (MAGENTA): Hold vertical with Arduino at bottom - captures LED offset
+                    calibrationPhase = 'flat';
                     targetRotation = { x: 0, y: 0, z: 0 };
                     currentRotation = { x: 0, y: 0, z: 0 };
-                    baselineY = currentAccel.y || 1.0;  // Store baseline
-                    log('Cal Flat - visualization reset to flat', 'success');
-                } else if (effectId === 94) {
-                    // Cal LED - capture current gravity angle as LED offset
-                    const ax = currentAccel.x;
-                    const az = currentAccel.z;
-                    ledOffsetAngle = Math.atan2(ax, az) * 180 / Math.PI;
-                    log(`Cal LED - offset captured: ${ledOffsetAngle.toFixed(1)}°`, 'success');
+                    baselineY = currentAccel.y || 1.0;
+                    log('Calibration started - Phase 1: Place hoop FLAT (CYAN pulsing)', 'success');
+                    log('When stable, it will auto-advance to Phase 2', 'info');
+                } else {
+                    calibrationPhase = null;  // Clear calibration phase for other effects
                 }
 
                 log(`Effect set to ${effectId}`, 'success');
