@@ -11,7 +11,7 @@
 
 #include "../../include/utils/EffectUtils.h"
 #include "../../include/Config.h"
-#include "Arduino_BMI270_BMM150.h"
+#include <Arduino_LSM9DS1.h>
 
 /**
  * @brief Interpolate color between two given colors.

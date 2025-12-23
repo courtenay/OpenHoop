@@ -11,7 +11,7 @@
 
 #include <Arduino.h>
 #include <nrf.h>
-#include <Arduino_BMI270_BMM150.h>
+#include <Arduino_LSM9DS1.h>
 #include "../include/services/BleService.h"
 #include "../include/services/EffectService.h"
 #include "../include/utils/EffectUtils.h"

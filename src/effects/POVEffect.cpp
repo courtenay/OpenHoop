@@ -7,7 +7,7 @@
 
 #include "../../include/effects/POVEffect.h"
 #include "../../include/Config.h"
-#include "Arduino_BMI270_BMM150.h"
+#include <Arduino_LSM9DS1.h>
 
 // Number of angular slices (columns) in the POV image
 static const int NUM_COLUMNS = 72;  // 5 degrees per column

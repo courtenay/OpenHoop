@@ -6,7 +6,7 @@
 
 #include "../../include/effects/CalibrateEffect.h"
 #include "../../include/Config.h"
-#include "Arduino_BMI270_BMM150.h"
+#include <Arduino_LSM9DS1.h>
 
 CalibrateEffect::CalibrateEffect() : lastPrintTime(0) {}
 
