@@ -158,9 +158,10 @@ float EffectUtils::getInclination() {
         return 0.0f;  // Return 0 if read fails
     }
 
-    // Calculate tilt angle from gravity vector (0-360 degrees)
-    // Uses X and Y accelerometer values to determine orientation
-    float inclination = atan2(y, x) * RAD_TO_DEG;
+    // Y axis points down when hoop is flat (calibrated)
+    // X and Z are in the horizontal plane of the hoop
+    // Tilt angle uses X and Z to detect which way the hoop is tilted
+    float inclination = atan2(x, z) * RAD_TO_DEG;
 
     // Normalize to 0-360 range
     if (inclination < 0) {

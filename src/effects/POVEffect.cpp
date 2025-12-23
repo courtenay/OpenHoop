@@ -47,12 +47,12 @@ void POVEffect::updateRotation() {
         // Demo: auto-advance angle
         currentAngle += demoSpeed;
     } else {
-        // Real mode: use gyroscope Z-axis
+        // Real mode: use gyroscope Y-axis (hoop spins around vertical Y axis)
         float gx, gy, gz;
         if (IMU.readGyroscope(gx, gy, gz)) {
-            // Try different axes - gz is rotation around Z
+            // Y axis is vertical (calibrated), so gy measures hoop spin
             // Integrate angular velocity to get position
-            currentAngle += gz * dt;
+            currentAngle += gy * dt;
         }
     }
 
