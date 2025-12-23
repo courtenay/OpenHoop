@@ -112,16 +112,18 @@ void WaterEffect::update() {
         g = static_cast<uint8_t>(g * wave);
         b = static_cast<uint8_t>(b * wave);
 
-        // Add white sparkles near surface
-        uint8_t w = 0;
+        // Add white sparkles near surface (blend into RGB since no W channel)
         if (distFromCenter > 0.7f) {
             float sparkle = sin(wavePhase * 3 + ledIndex * 0.5f);
             if (sparkle > 0.8f) {
-                w = static_cast<uint8_t>((sparkle - 0.8f) * 5 * 100);
+                uint8_t sparkleAmount = static_cast<uint8_t>((sparkle - 0.8f) * 5 * 80);
+                r = min(255, r + sparkleAmount);
+                g = min(255, g + sparkleAmount);
+                b = min(255, b + sparkleAmount);
             }
         }
 
-        hoop.setPixelColor(ledIndex, r, g, b, w);
+        hoop.setPixelColor(ledIndex, r, g, b);
     }
 
     hoop.show();
