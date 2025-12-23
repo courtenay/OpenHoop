@@ -38,8 +38,8 @@ private:
     unsigned long stableStartTime;
     bool isStable;
 
-    static constexpr float STABILITY_THRESHOLD = 0.05f;  // Max allowed acceleration change
-    static constexpr unsigned long STABLE_DURATION_MS = 1000;  // Must be stable for 1 second
+    static constexpr float STABILITY_THRESHOLD = 0.15f;  // Max allowed acceleration change
+    static constexpr unsigned long STABLE_DURATION_MS = 500;  // Must be stable for 0.5 seconds
     static constexpr float TILT_THRESHOLD = 0.7f;  // Min tilt to detect vertical position
 };
 
