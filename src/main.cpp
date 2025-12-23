@@ -154,16 +154,17 @@ void setup() {
     hoop.begin();
     hoop.show();
 
-    const EffectType bootEffect = pickRandomBootEffect();
-    effectService->dispatchEffectCommand(bootEffect);
-
-    // Initialize DotStar BLE services
+    // Initialize BLE services BEFORE starting effects
+    // (Some effects like SPECTRUM use PDM which can conflict with BLE if started first)
     if (!bleService.beginAndAdvertise()) {
         while (true) {
             delay(1000);
         }
     }
 
+    // Now start a random boot effect
+    const EffectType bootEffect = pickRandomBootEffect();
+    effectService->dispatchEffectCommand(bootEffect);
     bleService.effectCharacteristic.writeValue(static_cast<uint8_t>(bootEffect));
 
     lastBatteryUpdateMs = millis() - kBatteryUpdateIntervalMs;
