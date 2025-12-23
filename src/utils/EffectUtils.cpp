@@ -35,10 +35,16 @@ namespace {
 
     uint32_t calculateChecksum(const CalibrationStorage& data) {
         uint32_t sum = data.magic;
-        sum ^= *reinterpret_cast<const uint32_t*>(&data.baselineX);
-        sum ^= *reinterpret_cast<const uint32_t*>(&data.baselineY);
-        sum ^= *reinterpret_cast<const uint32_t*>(&data.baselineZ);
-        sum ^= *reinterpret_cast<const uint32_t*>(&data.ledOffsetAngle);
+        uint32_t tmp;
+        // Use memcpy to avoid strict-aliasing violations
+        memcpy(&tmp, &data.baselineX, sizeof(tmp));
+        sum ^= tmp;
+        memcpy(&tmp, &data.baselineY, sizeof(tmp));
+        sum ^= tmp;
+        memcpy(&tmp, &data.baselineZ, sizeof(tmp));
+        sum ^= tmp;
+        memcpy(&tmp, &data.ledOffsetAngle, sizeof(tmp));
+        sum ^= tmp;
         return sum;
     }
 }
@@ -423,13 +429,6 @@ float EffectUtils::getInclination() {
     float inclination;
 
     if (calibration.isCalibrated) {
-        // Calculate tilt relative to baseline
-        // The baseline captures gravity direction when "flat"
-        // Subtract baseline to get relative change
-        float relX = x - calibration.baselineX;
-        float relY = y - calibration.baselineY;
-        float relZ = z - calibration.baselineZ;
-
         // Find the two axes with smallest baseline values (horizontal plane)
         // and use them for tilt calculation
         float absBaseX = abs(calibration.baselineX);

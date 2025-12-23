@@ -13,11 +13,20 @@
 
 // ============================================================================
 // FEATURE FLAGS - Comment out to disable features and reduce code size
+// These use #ifndef to allow overriding from platformio.ini build flags
 // ============================================================================
+#ifndef FEATURE_BLE
 #define FEATURE_BLE           // Bluetooth Low Energy control
+#endif
+#ifndef FEATURE_IMU
 #define FEATURE_IMU           // IMU for motion-reactive effects (Water, Calibrate)
+#endif
+#ifndef FEATURE_SOUND
 #define FEATURE_SOUND         // PDM microphone for sound-reactive effects
+#endif
+#ifndef FEATURE_SERIAL_DEBUG
 #define FEATURE_SERIAL_DEBUG  // Serial output for debugging (disable in production)
+#endif
 
 // Production mode: uncomment to disable all debug output
 // #define PRODUCTION_MODE
