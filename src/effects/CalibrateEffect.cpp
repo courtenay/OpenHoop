@@ -81,10 +81,9 @@ void CalibrateEffect::update() {
             // Show pulsing CYAN
             hoop.fill(HulaHoopDotStar::Color(0, brightness, brightness));
 
-            // Check if flat and stable
-            // Flat means one axis has most of gravity (~1g), others are near 0
-            float maxAxis = max(max(fabs(ax), fabs(ay)), fabs(az));
-            bool isFlat = (maxAxis > 0.8f) && stableEnough;
+            // Check if stable (we don't really need it to be perfectly flat)
+            // Just need it to be still so we can capture a baseline
+            bool isFlat = stableEnough;  // Any stable position works for baseline
 
             if (isFlat) {
                 // Capture flat baseline
