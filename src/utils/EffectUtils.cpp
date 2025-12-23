@@ -96,6 +96,58 @@ short EffectUtils::sampleBuffer[256];
 volatile int EffectUtils::samplesRead;
 
 /**
+ * @brief Static IMU calibration data.
+ */
+IMUCalibration EffectUtils::calibration;
+
+/**
+ * @brief Calibrate IMU by capturing current orientation as baseline.
+ */
+void EffectUtils::calibrateIMU() {
+    float x, y, z;
+
+    // Average multiple readings for stability
+    float sumX = 0, sumY = 0, sumZ = 0;
+    const int samples = 10;
+
+    for (int i = 0; i < samples; i++) {
+        if (IMU.readAcceleration(x, y, z)) {
+            sumX += x;
+            sumY += y;
+            sumZ += z;
+        }
+        delay(10);
+    }
+
+    calibration.baselineX = sumX / samples;
+    calibration.baselineY = sumY / samples;
+    calibration.baselineZ = sumZ / samples;
+    calibration.isCalibrated = true;
+
+    Serial.println("=== IMU Calibrated ===");
+    Serial.print("Baseline - X: ");
+    Serial.print(calibration.baselineX, 3);
+    Serial.print(" Y: ");
+    Serial.print(calibration.baselineY, 3);
+    Serial.print(" Z: ");
+    Serial.println(calibration.baselineZ, 3);
+}
+
+/**
+ * @brief Check if IMU has been calibrated.
+ */
+bool EffectUtils::isIMUCalibrated() {
+    return calibration.isCalibrated;
+}
+
+/**
+ * @brief Get the calibration data.
+ */
+const IMUCalibration& EffectUtils::getCalibration() {
+    return calibration;
+}
+
+/**
  * @brief Callback function for PDM data.
  * Reads PDM data into the sample buffer.
  */
@@ -148,6 +200,7 @@ int EffectUtils::calculateSoundSpectrum() {
 
 /**
  * @brief Get the inclination angle based on accelerometer readings.
+ * Uses calibration baseline if available for relative tilt calculation.
  * @return The inclination angle (0-360 degrees).
  */
 float EffectUtils::getInclination() {
@@ -158,10 +211,38 @@ float EffectUtils::getInclination() {
         return 0.0f;  // Return 0 if read fails
     }
 
-    // Y axis points down when hoop is flat (calibrated)
-    // X and Z are in the horizontal plane of the hoop
-    // Tilt angle uses X and Z to detect which way the hoop is tilted
-    float inclination = atan2(x, z) * RAD_TO_DEG;
+    float inclination;
+
+    if (calibration.isCalibrated) {
+        // Calculate tilt relative to baseline
+        // The baseline captures gravity direction when "flat"
+        // Subtract baseline to get relative change
+        float relX = x - calibration.baselineX;
+        float relY = y - calibration.baselineY;
+        float relZ = z - calibration.baselineZ;
+
+        // Find the two axes with smallest baseline values (horizontal plane)
+        // and use them for tilt calculation
+        float absBaseX = abs(calibration.baselineX);
+        float absBaseY = abs(calibration.baselineY);
+        float absBaseZ = abs(calibration.baselineZ);
+
+        // The axis with largest baseline is gravity (vertical)
+        // Use the other two for tilt angle
+        if (absBaseY >= absBaseX && absBaseY >= absBaseZ) {
+            // Y is vertical, use X and Z for tilt
+            inclination = atan2(x, z) * RAD_TO_DEG;
+        } else if (absBaseX >= absBaseY && absBaseX >= absBaseZ) {
+            // X is vertical, use Y and Z for tilt
+            inclination = atan2(y, z) * RAD_TO_DEG;
+        } else {
+            // Z is vertical, use X and Y for tilt
+            inclination = atan2(x, y) * RAD_TO_DEG;
+        }
+    } else {
+        // Fallback: assume Y is vertical (legacy behavior)
+        inclination = atan2(x, z) * RAD_TO_DEG;
+    }
 
     // Normalize to 0-360 range
     if (inclination < 0) {

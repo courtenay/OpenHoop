@@ -16,10 +16,37 @@
 #include <PDM.h>
 
 /**
+ * @brief IMU calibration data - stores baseline orientation.
+ */
+struct IMUCalibration {
+    float baselineX;      // Gravity X when "flat"
+    float baselineY;      // Gravity Y when "flat"
+    float baselineZ;      // Gravity Z when "flat"
+    bool isCalibrated;    // Has calibration been performed?
+
+    IMUCalibration() : baselineX(0), baselineY(0), baselineZ(0), isCalibrated(false) {}
+};
+
+/**
  * @brief LED effect utility functions.
  */
 class EffectUtils {
 public:
+    /**
+     * @brief Calibrate IMU baseline from current orientation.
+     * Call this when the hoop is in its "flat" reference position.
+     */
+    static void calibrateIMU();
+
+    /**
+     * @brief Check if IMU has been calibrated.
+     */
+    static bool isIMUCalibrated();
+
+    /**
+     * @brief Get calibration data (for display/debugging).
+     */
+    static const IMUCalibration& getCalibration();
     /**
      * @brief Apply brightness to a color.
      * @param color Original color value.
@@ -92,6 +119,11 @@ private:
      * @brief Number of samples read.
      */
     static volatile int samplesRead;
+
+    /**
+     * @brief IMU calibration data.
+     */
+    static IMUCalibration calibration;
 };
 
 #endif //OPENHOOP_EFFECTUTILS_H

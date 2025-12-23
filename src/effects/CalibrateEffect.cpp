@@ -6,6 +6,7 @@
 
 #include "../../include/effects/CalibrateEffect.h"
 #include "../../include/Config.h"
+#include "../../include/utils/EffectUtils.h"
 #include <Arduino_LSM9DS1.h>
 
 CalibrateEffect::CalibrateEffect() : lastPrintTime(0) {}
@@ -13,13 +14,19 @@ CalibrateEffect::CalibrateEffect() : lastPrintTime(0) {}
 void CalibrateEffect::start() {
     lastPrintTime = 0;
     Serial.println("=== IMU Calibration Mode ===");
-    Serial.println("Place hoop FLAT on ground for baseline.");
-    Serial.println("LED sections show:");
+    Serial.println("Capturing baseline orientation...");
+
+    // Capture baseline - this tells the system what "flat" looks like
+    EffectUtils::calibrateIMU();
+
+    Serial.println("");
+    Serial.println("Baseline captured! LED sections now show:");
     Serial.println("  RED section   = Accelerometer X");
     Serial.println("  GREEN section = Accelerometer Y");
-    Serial.println("  BLUE section  = Accelerometer Z (gravity when flat)");
+    Serial.println("  BLUE section  = Accelerometer Z");
     Serial.println("  WHITE section = Gyroscope spin magnitude");
     Serial.println("");
+    Serial.println("Tilt the hoop to see colors change!");
 }
 
 void CalibrateEffect::update() {
