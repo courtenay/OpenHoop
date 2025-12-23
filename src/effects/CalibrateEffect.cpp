@@ -34,6 +34,7 @@ void CalibrateEffect::update() {
         // Flash red if IMU read fails
         hoop.fill(HulaHoopDotStar::Color(255, 0, 0));
         hoop.show();
+        Serial.println("IMU read failed!");
         return;
     }
 
@@ -64,41 +65,30 @@ void CalibrateEffect::update() {
     int numLeds = hoop.getActivePixels();
     int sectionSize = numLeds / 4;
 
-    // Map accelerometer values (-1 to +1 g) to brightness (0-255)
-    // abs() because we care about magnitude, sign shows in which section is brightest
-    uint8_t brightnessX = static_cast<uint8_t>(min(255.0f, abs(ax) * 255.0f));
-    uint8_t brightnessY = static_cast<uint8_t>(min(255.0f, abs(ay) * 255.0f));
-    uint8_t brightnessZ = static_cast<uint8_t>(min(255.0f, abs(az) * 255.0f));
+    // Map accelerometer values (-1 to +1 g) to brightness
+    // Base brightness of 30 so something is always visible
+    // Full gravity (1g) = full brightness (255)
+    uint8_t baseB = 30;
+    uint8_t brightnessX = static_cast<uint8_t>(baseB + min(225.0f, abs(ax) * 225.0f));
+    uint8_t brightnessY = static_cast<uint8_t>(baseB + min(225.0f, abs(ay) * 225.0f));
+    uint8_t brightnessZ = static_cast<uint8_t>(baseB + min(225.0f, abs(az) * 225.0f));
 
-    // Gyro: map 0-500 deg/s to 0-255 brightness
-    uint8_t brightnessSpin = static_cast<uint8_t>(min(255.0f, spinMagnitude / 2.0f));
+    // Gyro: map 0-500 deg/s to brightness, base of 30
+    uint8_t brightnessSpin = static_cast<uint8_t>(baseB + min(225.0f, spinMagnitude / 2.2f));
 
-    // Section 1: RED = X axis
+    // Section 1: RED = X axis (solid color, no gradient)
     for (int i = 0; i < sectionSize; i++) {
-        // Add direction indicator: bright at one end if positive, other end if negative
-        float posInSection = static_cast<float>(i) / sectionSize;
-        uint8_t dirBrightness = (ax > 0) ?
-            static_cast<uint8_t>(posInSection * brightnessX) :
-            static_cast<uint8_t>((1.0f - posInSection) * brightnessX);
-        hoop.setPixelColor(i, dirBrightness, 0, 0);
+        hoop.setPixelColor(i, brightnessX, 0, 0);
     }
 
     // Section 2: GREEN = Y axis
     for (int i = sectionSize; i < sectionSize * 2; i++) {
-        float posInSection = static_cast<float>(i - sectionSize) / sectionSize;
-        uint8_t dirBrightness = (ay > 0) ?
-            static_cast<uint8_t>(posInSection * brightnessY) :
-            static_cast<uint8_t>((1.0f - posInSection) * brightnessY);
-        hoop.setPixelColor(i, 0, dirBrightness, 0);
+        hoop.setPixelColor(i, 0, brightnessY, 0);
     }
 
     // Section 3: BLUE = Z axis
     for (int i = sectionSize * 2; i < sectionSize * 3; i++) {
-        float posInSection = static_cast<float>(i - sectionSize * 2) / sectionSize;
-        uint8_t dirBrightness = (az > 0) ?
-            static_cast<uint8_t>(posInSection * brightnessZ) :
-            static_cast<uint8_t>((1.0f - posInSection) * brightnessZ);
-        hoop.setPixelColor(i, 0, 0, dirBrightness);
+        hoop.setPixelColor(i, 0, 0, brightnessZ);
     }
 
     // Section 4: WHITE = Spin magnitude (gyroscope)

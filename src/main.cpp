@@ -52,6 +52,8 @@ constexpr EffectType kBootEffects[] = {
 
 constexpr bool isValidEffect(uint8_t effectValue) {
     return (effectValue <= static_cast<uint8_t>(EffectType::MUSHROOM)) ||
+           (effectValue == static_cast<uint8_t>(EffectType::CALIBRATE)) ||
+           (effectValue == static_cast<uint8_t>(EffectType::POV)) ||
            (effectValue == static_cast<uint8_t>(EffectType::PULSE)) ||
            (effectValue == static_cast<uint8_t>(EffectType::SPECTRUM));
 }
