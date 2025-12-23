@@ -2,252 +2,204 @@
  * @project OpenHoop
  * @file POVEffect.cpp
  * @brief Implementation of the POVEffect class.
- * @details Persistence of Vision effect using gyroscope for rotation tracking.
- * @author OpenHoop Contributors
- * @date 2024-12-15
- * @license Open-source license.
+ * @details Procedural POV patterns - no RAM buffer, computed on-the-fly.
  */
 
 #include "../../include/effects/POVEffect.h"
 #include "../../include/Config.h"
 #include "Arduino_BMI270_BMM150.h"
 
-/**
- * @brief Constructor for POVEffect.
- */
+// Number of angular slices (columns) in the POV image
+static const int NUM_COLUMNS = 72;  // 5 degrees per column
+
 POVEffect::POVEffect()
-    : imageData(nullptr),
-      currentAngle(0.0f),
-      angularVelocity(0.0f),
+    : currentAngle(0.0f),
       lastUpdateTime(0),
-      demoMode(true),      // Start in demo mode for testing
-      demoSpeed(3.0f) {    // 3 degrees per frame = ~120 frames per revolution
+      demoMode(true),
+      demoSpeed(4.0f),
+      currentPattern(0) {
 }
 
-/**
- * @brief Destructor.
- */
-POVEffect::~POVEffect() {
-    if (imageData) {
-        delete[] imageData;
-        imageData = nullptr;
-    }
-}
-
-/**
- * @brief Initialize the effect.
- */
 void POVEffect::start() {
-    // Allocate image buffer
-    imageData = new LedColor[NUM_COLUMNS * NUM_ROWS];
-
-    // Clear to black
-    for (int i = 0; i < NUM_COLUMNS * NUM_ROWS; i++) {
-        imageData[i] = LedColor(0, 0, 0, 0);
-    }
-
-    // Initialize with a test pattern
-    initTestPattern();
-    // Or use text: initTextPattern("HI");
-
     currentAngle = 0.0f;
     lastUpdateTime = millis();
+    currentPattern = 0;  // Start with heart
+    Serial.println("POV Effect started - demo mode");
+    Serial.println("Patterns: 0=Heart, 1=Spiral, 2=Text");
 }
 
-/**
- * @brief Update the effect each frame.
- */
 void POVEffect::update() {
     updateRotation();
-    displayCurrentColumn();
+    displayPattern();
 }
 
-/**
- * @brief Stop the effect.
- */
 void POVEffect::stop() {
-    if (imageData) {
-        delete[] imageData;
-        imageData = nullptr;
-    }
     hoop.fill(HulaHoopDotStar::Color(0, 0, 0));
+    hoop.show();
 }
 
-/**
- * @brief Set a pixel in the image buffer.
- */
-void POVEffect::setImagePixel(int column, int row, const LedColor& color) {
-    if (column >= 0 && column < NUM_COLUMNS && row >= 0 && row < NUM_ROWS) {
-        imageData[column * NUM_ROWS + row] = color;
-    }
-}
-
-/**
- * @brief Get a pixel from the image buffer.
- */
-LedColor POVEffect::getImagePixel(int column, int row) const {
-    if (column >= 0 && column < NUM_COLUMNS && row >= 0 && row < NUM_ROWS) {
-        return imageData[column * NUM_ROWS + row];
-    }
-    return LedColor(0, 0, 0, 0);
-}
-
-/**
- * @brief Update rotation tracking using gyroscope or demo mode.
- */
 void POVEffect::updateRotation() {
     unsigned long now = millis();
-    float dt = (now - lastUpdateTime) / 1000.0f;  // Delta time in seconds
+    float dt = (now - lastUpdateTime) / 1000.0f;
     lastUpdateTime = now;
 
     if (demoMode) {
-        // Demo mode: auto-advance for testing without spinning
+        // Demo: auto-advance angle
         currentAngle += demoSpeed;
     } else {
-        // Read gyroscope Z-axis (rotation around hoop's axis)
+        // Real mode: use gyroscope Z-axis
         float gx, gy, gz;
         if (IMU.readGyroscope(gx, gy, gz)) {
-            // gz is in degrees/second around Z-axis
-            angularVelocity = gz;
-            currentAngle += angularVelocity * dt;
+            // Try different axes - gz is rotation around Z
+            // Integrate angular velocity to get position
+            currentAngle += gz * dt;
         }
     }
 
-    // Normalize angle to 0-360
+    // Normalize to 0-360
     while (currentAngle >= 360.0f) currentAngle -= 360.0f;
     while (currentAngle < 0.0f) currentAngle += 360.0f;
 }
 
-/**
- * @brief Display the column corresponding to current rotation angle.
- */
-void POVEffect::displayCurrentColumn() {
-    // Map angle (0-360) to column index (0 to NUM_COLUMNS-1)
+void POVEffect::displayPattern() {
+    // Map angle to column index
     int column = static_cast<int>((currentAngle / 360.0f) * NUM_COLUMNS) % NUM_COLUMNS;
 
-    // Display this column on the LED strip
-    for (int row = 0; row < hoop.getActivePixels() && row < NUM_ROWS; row++) {
-        LedColor pixel = getImagePixel(column, row);
-
-        if (pixel.alpha > 0) {
-            hoop.setPixelColor(row, pixel.red, pixel.green, pixel.blue);
-        } else {
-            hoop.setPixelColor(row, 0, 0, 0);
-        }
+    // Draw the selected pattern
+    switch (currentPattern) {
+        case 0:
+            drawHeart(column);
+            break;
+        case 1:
+            drawSpiral(column);
+            break;
+        case 2:
+            drawText(column);
+            break;
+        default:
+            drawHeart(column);
+            break;
     }
 
     hoop.show();
 }
 
-/**
- * @brief Initialize a heart pattern for testing.
- * The heart spans multiple columns so it appears when spinning.
- */
-void POVEffect::initTestPattern() {
-    // Create a simple heart pattern
-    // Heart is about 24 columns wide (120 degrees of the rotation)
-    // and spans the middle section of LEDs
+bool POVEffect::isInsideHeart(float x, float y) {
+    // Heart equation: (x^2 + y^2 - 1)^3 - x^2 * y^3 < 0
+    // Scaled and positioned for our coordinate system
+    float x2 = x * x;
+    float y2 = y * y;
+    float expr = (x2 + y2 - 1.0f);
+    return (expr * expr * expr - x2 * y * y * y) < 0.0f;
+}
 
-    const int heartWidth = 24;
-    const int heartHeight = 40;
-    const int startCol = (NUM_COLUMNS - heartWidth) / 2;
-    const int startRow = (NUM_ROWS - heartHeight) / 2;
+void POVEffect::drawHeart(int column) {
+    int numLeds = hoop.getActivePixels();
 
-    // Heart shape defined as a bitmap (1 = filled)
-    // Each row of this array is one vertical slice of the heart
-    const uint8_t heart[24][40] = {
-        // Columns 0-23, each has 40 rows
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-    };
+    // Column angle in radians (0 to 2*PI)
+    float angle = (column / static_cast<float>(NUM_COLUMNS)) * 2.0f * PI;
 
-    // Red/pink color for heart
-    LedColor heartColor(255, 20, 60, 255);
+    // Heart is visible in roughly half the rotation (front-facing)
+    // Map column to x-coordinate (-1.5 to 1.5)
+    float x = 1.5f * cos(angle);
 
-    for (int col = 0; col < heartWidth; col++) {
-        for (int row = 0; row < heartHeight; row++) {
-            if (heart[col][row]) {
-                setImagePixel(startCol + col, startRow + row, heartColor);
-            }
+    for (int led = 0; led < numLeds; led++) {
+        // Map LED position to y-coordinate
+        // Center of strip = heart center, edges = top/bottom
+        float y = 1.5f * (1.0f - 2.0f * led / static_cast<float>(numLeds - 1));
+
+        if (isInsideHeart(x * 0.8f, y)) {
+            // Red/pink heart
+            hoop.setPixelColor(led, 255, 20, 60);
+        } else {
+            hoop.setPixelColor(led, 0, 0, 0);
         }
     }
 }
 
-/**
- * @brief Initialize a simple text pattern.
- * Basic 5x7 pixel font for uppercase letters.
- */
-void POVEffect::initTextPattern(const char* text) {
-    // Simple 5-wide font definitions for basic letters
-    // Each letter is 5 columns x 7 rows
-    static const uint8_t fontH[5] = {0x7F, 0x08, 0x08, 0x08, 0x7F};  // H
-    static const uint8_t fontI[5] = {0x00, 0x41, 0x7F, 0x41, 0x00};  // I
-    static const uint8_t fontO[5] = {0x3E, 0x41, 0x41, 0x41, 0x3E};  // O
-    static const uint8_t fontP[5] = {0x7F, 0x09, 0x09, 0x09, 0x06};  // P
-    static const uint8_t fontV[5] = {0x1F, 0x20, 0x40, 0x20, 0x1F};  // V
+void POVEffect::drawSpiral(int column) {
+    int numLeds = hoop.getActivePixels();
+    float angle = (column / static_cast<float>(NUM_COLUMNS)) * 360.0f;
 
-    const uint8_t* fonts[] = {fontH, fontI, fontO, fontP, fontV};
-    const char chars[] = "HIOPV";
+    for (int led = 0; led < numLeds; led++) {
+        // Spiral: color based on angle + position
+        float ledPos = static_cast<float>(led) / numLeds;
+        float hue = fmod(angle + ledPos * 180.0f, 360.0f);
 
-    LedColor textColor(0, 255, 100, 255);  // Green text
-    int startCol = 10;
-    int startRow = (NUM_ROWS / 2) - 20;  // Center vertically
-    int scale = 6;  // Scale up the font
+        // Convert HSV to RGB (simplified)
+        float h = hue / 60.0f;
+        int i = static_cast<int>(h) % 6;
+        float f = h - static_cast<int>(h);
 
-    for (int i = 0; text[i] != '\0'; i++) {
-        const uint8_t* fontData = nullptr;
+        uint8_t r, g, b;
+        uint8_t v = 255;
+        uint8_t p = 0;
+        uint8_t q = static_cast<uint8_t>(255 * (1.0f - f));
+        uint8_t t = static_cast<uint8_t>(255 * f);
 
-        // Find the font for this character
-        for (int j = 0; chars[j] != '\0'; j++) {
-            if (text[i] == chars[j]) {
-                fontData = fonts[j];
-                break;
-            }
+        switch (i) {
+            case 0: r = v; g = t; b = p; break;
+            case 1: r = q; g = v; b = p; break;
+            case 2: r = p; g = v; b = t; break;
+            case 3: r = p; g = q; b = v; break;
+            case 4: r = t; g = p; b = v; break;
+            default: r = v; g = p; b = q; break;
         }
 
-        if (fontData) {
-            // Draw the character
-            for (int col = 0; col < 5; col++) {
-                uint8_t columnBits = fontData[col];
-                for (int row = 0; row < 7; row++) {
-                    if (columnBits & (1 << row)) {
-                        // Scale up the pixel
-                        for (int sx = 0; sx < scale; sx++) {
-                            for (int sy = 0; sy < scale; sy++) {
-                                setImagePixel(
-                                    startCol + col * scale + sx,
-                                    startRow + row * scale + sy,
-                                    textColor
-                                );
-                            }
-                        }
+        hoop.setPixelColor(led, r, g, b);
+    }
+}
+
+void POVEffect::drawText(int column) {
+    // Simple 5x7 font bitmap for "HI" stored in PROGMEM-compatible format
+    // Each byte is a column, bits are rows
+    static const uint8_t fontH[] = {0x7F, 0x08, 0x08, 0x08, 0x7F};
+    static const uint8_t fontI[] = {0x00, 0x41, 0x7F, 0x41, 0x00};
+
+    int numLeds = hoop.getActivePixels();
+    int scale = numLeds / 14;  // Scale font to fit
+    int centerOffset = (numLeds - 7 * scale) / 2;
+
+    // Map column to text position
+    // Text spans about 1/3 of rotation (120 degrees)
+    int textColumns = NUM_COLUMNS / 3;
+    int textStart = NUM_COLUMNS / 3;  // Start at 120 degrees
+
+    // Clear all LEDs first
+    for (int led = 0; led < numLeds; led++) {
+        hoop.setPixelColor(led, 0, 0, 0);
+    }
+
+    // Check if we're in the text display region
+    if (column >= textStart && column < textStart + textColumns) {
+        int textCol = column - textStart;
+        int charWidth = textColumns / 12;  // Space for 2 chars + gap
+
+        const uint8_t* fontData = nullptr;
+        int fontCol = -1;
+
+        if (textCol < 5 * charWidth) {
+            // "H"
+            fontData = fontH;
+            fontCol = textCol / charWidth;
+        } else if (textCol >= 6 * charWidth && textCol < 11 * charWidth) {
+            // "I"
+            fontData = fontI;
+            fontCol = (textCol - 6 * charWidth) / charWidth;
+        }
+
+        if (fontData && fontCol >= 0 && fontCol < 5) {
+            uint8_t columnBits = fontData[fontCol];
+
+            for (int bit = 0; bit < 7; bit++) {
+                if (columnBits & (1 << bit)) {
+                    // Light up LEDs for this bit
+                    int ledStart = centerOffset + bit * scale;
+                    for (int s = 0; s < scale && ledStart + s < numLeds; s++) {
+                        hoop.setPixelColor(ledStart + s, 0, 255, 100);  // Green text
                     }
                 }
             }
         }
-
-        startCol += 6 * scale;  // Move to next character position
     }
 }

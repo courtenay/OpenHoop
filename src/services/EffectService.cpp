@@ -20,6 +20,7 @@
 #include "../../include/effects/RainbowLeopardEffect.h"
 #include "../../include/effects/MushroomImageEffect.h"
 #include "../../include/effects/POVEffect.h"
+#include "../../include/effects/CalibrateEffect.h"
 #include "../../include/Config.h"
 
 /**
@@ -88,6 +89,9 @@ void EffectService::dispatchEffectCommand(EffectType gesture) {
             break;
         case EffectType::POV:
             setEffect(std::make_unique<POVEffect>());
+            break;
+        case EffectType::CALIBRATE:
+            setEffect(std::make_unique<CalibrateEffect>());
             break;
         default:
             // Stop the current effect if no matching gesture is found

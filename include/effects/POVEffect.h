@@ -3,81 +3,68 @@
  * @file POVEffect.h
  * @brief Header file for the POVEffect class.
  * @details Persistence of Vision effect that displays images while spinning.
- * @author OpenHoop Contributors
- * @date 2024-12-15
- * @license Open-source license.
  */
 
 #ifndef OPENHOOP_POVEFFECT_H
 #define OPENHOOP_POVEFFECT_H
 
 #include "Effect.h"
-#include "../images/LedImage.h"
 
 /**
  * @brief Persistence of Vision effect that displays images when hoop spins.
  *
- * POV works by displaying different columns of an image based on rotation angle.
- * When spinning fast enough, the eye perceives the full image.
+ * Uses procedural patterns (no RAM buffer) to minimize memory usage.
+ * Patterns are computed on-the-fly based on rotation angle.
  */
 class POVEffect : public Effect {
 public:
     POVEffect();
-    ~POVEffect();
 
     void start() override;
     void update() override;
     void stop() override;
 
 private:
-    // Image data: stored as columns (numColumns x numLEDs)
-    // Each column represents what to display at that rotation angle
-    static const int NUM_COLUMNS = 72;  // 72 columns = 5 degrees per column
-    static const int NUM_ROWS = 288;    // Match LED count
-
-    LedColor* imageData;  // Column-major: imageData[col * NUM_ROWS + row]
-
-    float currentAngle;      // Current rotation angle (0-360)
-    float angularVelocity;   // Degrees per second from gyroscope
+    float currentAngle;          // Current rotation angle (0-360)
     unsigned long lastUpdateTime;
 
     // Demo mode for testing without spinning
     bool demoMode;
-    float demoSpeed;  // Degrees per frame in demo mode
+    float demoSpeed;
+
+    // Pattern selection
+    int currentPattern;
+    static const int NUM_PATTERNS = 3;
 
     /**
-     * @brief Initialize a simple test pattern (heart shape).
-     */
-    void initTestPattern();
-
-    /**
-     * @brief Initialize text pattern.
-     * @param text Simple text to display (uppercase letters only).
-     */
-    void initTextPattern(const char* text);
-
-    /**
-     * @brief Set a pixel in the POV image buffer.
-     * @param column Column index (0 to NUM_COLUMNS-1).
-     * @param row Row index (0 to NUM_ROWS-1, maps to LED index).
-     * @param color Color to set.
-     */
-    void setImagePixel(int column, int row, const LedColor& color);
-
-    /**
-     * @brief Get a pixel from the POV image buffer.
-     */
-    LedColor getImagePixel(int column, int row) const;
-
-    /**
-     * @brief Read gyroscope and update angular position.
+     * @brief Update rotation tracking using gyroscope or demo mode.
      */
     void updateRotation();
 
     /**
-     * @brief Display the current column based on rotation angle.
+     * @brief Compute and display pattern based on current angle.
      */
-    void displayCurrentColumn();
+    void displayPattern();
+
+    /**
+     * @brief Heart pattern - shows a heart when spinning.
+     */
+    void drawHeart(int column);
+
+    /**
+     * @brief Spiral pattern - colorful spiral.
+     */
+    void drawSpiral(int column);
+
+    /**
+     * @brief Text pattern - displays "HI".
+     */
+    void drawText(int column);
+
+    /**
+     * @brief Check if a point is inside the heart shape.
+     */
+    bool isInsideHeart(float x, float y);
 };
 
 #endif //OPENHOOP_POVEFFECT_H
