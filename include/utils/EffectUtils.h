@@ -57,6 +57,18 @@ public:
     static void calibrateLEDOffset();
 
     /**
+     * @brief Save calibration data to persistent flash storage.
+     */
+    static void saveCalibration();
+
+    /**
+     * @brief Load calibration data from persistent flash storage.
+     * Call this on startup to restore previous calibration.
+     * @return true if valid calibration was loaded, false otherwise.
+     */
+    static bool loadCalibration();
+
+    /**
      * @brief Get the angle to the bottom of the hoop (in LED index space).
      * @return Angle in degrees (0-360) that maps to LED positions.
      */

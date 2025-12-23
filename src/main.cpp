@@ -132,6 +132,11 @@ void setup() {
         Serial.println("WARNING: IMU failed to initialize! Motion effects won't work.");
     }
 
+    // Load saved calibration from flash (if available)
+    if (EffectUtils::loadCalibration()) {
+        Serial.println("Previous calibration restored");
+    }
+
     // Initialize DotStar hoop
     hoop.begin();
     hoop.show();

@@ -12,6 +12,36 @@
 #include "../../include/utils/EffectUtils.h"
 #include "../../include/Config.h"
 #include <Arduino_LSM9DS1.h>
+#include <mbed.h>
+#include <FlashIAP.h>
+
+// Flash storage for calibration persistence
+namespace {
+    // Magic number to validate stored data
+    constexpr uint32_t CALIBRATION_MAGIC = 0xCAFE1234;
+
+    // Structure for flash storage (must be aligned to 4 bytes)
+    struct CalibrationStorage {
+        uint32_t magic;
+        float baselineX;
+        float baselineY;
+        float baselineZ;
+        float ledOffsetAngle;
+        uint32_t checksum;
+    };
+
+    // Use last sector of flash for storage (safe area)
+    mbed::FlashIAP flash;
+
+    uint32_t calculateChecksum(const CalibrationStorage& data) {
+        uint32_t sum = data.magic;
+        sum ^= *reinterpret_cast<const uint32_t*>(&data.baselineX);
+        sum ^= *reinterpret_cast<const uint32_t*>(&data.baselineY);
+        sum ^= *reinterpret_cast<const uint32_t*>(&data.baselineZ);
+        sum ^= *reinterpret_cast<const uint32_t*>(&data.ledOffsetAngle);
+        return sum;
+    }
+}
 
 /**
  * @brief Interpolate color between two given colors.
@@ -192,6 +222,97 @@ void EffectUtils::calibrateLEDOffset() {
     Serial.print("Offset angle: ");
     Serial.print(calibration.ledOffsetAngle, 1);
     Serial.println(" degrees");
+
+    // Auto-save to flash after calibration
+    saveCalibration();
+}
+
+/**
+ * @brief Save calibration data to persistent flash storage.
+ */
+void EffectUtils::saveCalibration() {
+    if (!calibration.isCalibrated) {
+        Serial.println("No calibration to save");
+        return;
+    }
+
+    CalibrationStorage storage;
+    storage.magic = CALIBRATION_MAGIC;
+    storage.baselineX = calibration.baselineX;
+    storage.baselineY = calibration.baselineY;
+    storage.baselineZ = calibration.baselineZ;
+    storage.ledOffsetAngle = calibration.ledOffsetAngle;
+    storage.checksum = calculateChecksum(storage);
+
+    flash.init();
+
+    // Get flash geometry
+    uint32_t flashSize = flash.get_flash_size();
+    uint32_t sectorSize = flash.get_sector_size(flashSize - 1);
+
+    // Use last sector for calibration storage
+    uint32_t address = flashSize - sectorSize;
+
+    // Erase the sector first
+    flash.erase(address, sectorSize);
+
+    // Write calibration data
+    flash.program(&storage, address, sizeof(storage));
+
+    flash.deinit();
+
+    Serial.println("Calibration saved to flash");
+}
+
+/**
+ * @brief Load calibration data from persistent flash storage.
+ */
+bool EffectUtils::loadCalibration() {
+    flash.init();
+
+    // Get flash geometry
+    uint32_t flashSize = flash.get_flash_size();
+    uint32_t sectorSize = flash.get_sector_size(flashSize - 1);
+
+    // Use last sector for calibration storage
+    uint32_t address = flashSize - sectorSize;
+
+    // Read calibration data
+    CalibrationStorage storage;
+    flash.read(&storage, address, sizeof(storage));
+
+    flash.deinit();
+
+    // Validate magic number and checksum
+    if (storage.magic != CALIBRATION_MAGIC) {
+        Serial.println("No saved calibration found");
+        return false;
+    }
+
+    if (storage.checksum != calculateChecksum(storage)) {
+        Serial.println("Calibration data corrupted");
+        return false;
+    }
+
+    // Restore calibration
+    calibration.baselineX = storage.baselineX;
+    calibration.baselineY = storage.baselineY;
+    calibration.baselineZ = storage.baselineZ;
+    calibration.ledOffsetAngle = storage.ledOffsetAngle;
+    calibration.isCalibrated = true;
+
+    Serial.println("=== Calibration Loaded from Flash ===");
+    Serial.print("Baseline - X: ");
+    Serial.print(calibration.baselineX, 3);
+    Serial.print(" Y: ");
+    Serial.print(calibration.baselineY, 3);
+    Serial.print(" Z: ");
+    Serial.println(calibration.baselineZ, 3);
+    Serial.print("LED Offset: ");
+    Serial.print(calibration.ledOffsetAngle, 1);
+    Serial.println(" degrees");
+
+    return true;
 }
 
 /**
