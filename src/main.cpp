@@ -371,7 +371,7 @@ void updateIMU() {
     }
     lastIMUUpdateMs = now;
 
-    float ax, ay, az, gx, gy, gz;
+    float ax, ay, az, gx, gy, gz, mx, my, mz;
     if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
         IMU.readAcceleration(ax, ay, az);
         IMU.readGyroscope(gx, gy, gz);
@@ -388,8 +388,14 @@ void updateIMU() {
         float gyRad = gy * DEG_TO_RAD;
         float gzRad = gz * DEG_TO_RAD;
 
-        // Update Madgwick filter
-        madgwick.update(gxRad, gyRad, gzRad, ax, ay, az);
+        // Update Madgwick filter - use magnetometer if available for stable yaw
+        if (IMU.magneticFieldAvailable() && IMU.readMagneticField(mx, my, mz)) {
+            // 9-DOF mode: accel + gyro + magnetometer (no yaw drift!)
+            madgwick.update(gxRad, gyRad, gzRad, ax, ay, az, mx, my, mz);
+        } else {
+            // 6-DOF fallback: accel + gyro only (yaw will drift)
+            madgwick.update(gxRad, gyRad, gzRad, ax, ay, az);
+        }
 
         // Send filtered orientation via BLE
         // Pack: roll, pitch, yaw (as int16 * 100 for precision) + raw accel for effects

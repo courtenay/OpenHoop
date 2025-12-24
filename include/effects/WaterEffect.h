@@ -38,7 +38,7 @@ private:
     float smoothedCos;         ///< Smoothed cos component of angle
 
     static constexpr float WATER_FILL = 0.25f;    ///< Fraction of hoop filled with "water" (1/4)
-    static constexpr float SMOOTHING_FACTOR = 0.08f;  ///< Exponential smoothing factor
+    static constexpr float SMOOTHING_FACTOR = 0.03f;  ///< Slower smoothing for calmer water (was 0.08)
 };
 
 #endif //WATEREFFECT_H
