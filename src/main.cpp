@@ -41,7 +41,10 @@ unsigned long lastBleActivityMs = 0;
 unsigned long lastEffectUpdateMs = 0;
 #ifdef FEATURE_IMU
 unsigned long lastIMUUpdateMs = 0;
-MadgwickFilter madgwick(50.0f);  // 50Hz sample rate (matches kIMUUpdateIntervalMs = 20ms)
+MadgwickFilter madgwick(20.0f);  // 20Hz sample rate (1000ms / 50ms interval)
+// Gyro bias calibration values (measured at startup)
+float gyroBiasX = 0, gyroBiasY = 0, gyroBiasZ = 0;
+bool gyroCalibrated = false;
 #endif
 bool isCentralConnected = false;
 bool inactivityDimmed = false;
@@ -144,6 +147,36 @@ void setup() {
     }
     if (!imuOk) {
         DEBUG_PRINTLN("WARNING: IMU failed to initialize! Motion effects won't work.");
+    } else {
+        // Calibrate gyro bias (device should be stationary during startup)
+        DEBUG_PRINTLN("Calibrating gyro bias (keep still)...");
+        constexpr int kCalibrationSamples = 100;
+        float sumGx = 0, sumGy = 0, sumGz = 0;
+        int validSamples = 0;
+        for (int i = 0; i < kCalibrationSamples; i++) {
+            float gx, gy, gz;
+            if (IMU.gyroscopeAvailable() && IMU.readGyroscope(gx, gy, gz)) {
+                sumGx += gx;
+                sumGy += gy;
+                sumGz += gz;
+                validSamples++;
+            }
+            delay(10);  // ~100 samples over 1 second
+        }
+        if (validSamples > 50) {
+            gyroBiasX = sumGx / validSamples;
+            gyroBiasY = sumGy / validSamples;
+            gyroBiasZ = sumGz / validSamples;
+            gyroCalibrated = true;
+            DEBUG_PRINT("Gyro bias: X=");
+            DEBUG_PRINT(gyroBiasX, 2);
+            DEBUG_PRINT(" Y=");
+            DEBUG_PRINT(gyroBiasY, 2);
+            DEBUG_PRINT(" Z=");
+            DEBUG_PRINTLN(gyroBiasZ, 2);
+        } else {
+            DEBUG_PRINTLN("Gyro calibration failed - not enough samples");
+        }
     }
 
     // Load saved calibration from flash (if available)
@@ -342,6 +375,13 @@ void updateIMU() {
     if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
         IMU.readAcceleration(ax, ay, az);
         IMU.readGyroscope(gx, gy, gz);
+
+        // Subtract gyro bias (calibrated at startup)
+        if (gyroCalibrated) {
+            gx -= gyroBiasX;
+            gy -= gyroBiasY;
+            gz -= gyroBiasZ;
+        }
 
         // Convert gyro from deg/s to rad/s for Madgwick
         float gxRad = gx * DEG_TO_RAD;
