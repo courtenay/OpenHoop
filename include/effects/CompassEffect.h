@@ -32,7 +32,7 @@ private:
     // Pulse animation
     float pulsePhase;
 
-    static constexpr float SMOOTHING_FACTOR = 0.08f;  ///< Smoothing for heading
+    static constexpr float SMOOTHING_FACTOR = 0.02f;  ///< Very slow smoothing for stable compass
     static constexpr int POINTER_WIDTH = 12;          ///< LEDs for the north pointer
     static constexpr int TAIL_WIDTH = 6;              ///< LEDs for the south tail
 };
