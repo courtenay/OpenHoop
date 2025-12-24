@@ -94,6 +94,7 @@
 #define SCOLOR_SERVICE_UUID "0A93"  ///< UUID for the solid color service.
 #define IMU_SERVICE_UUID "0A94"     ///< UUID for the IMU data stream.
 #define ENERGY_SERVICE_UUID "0A95"  ///< UUID for the energy saving service.
+#define CALIBRATION_SERVICE_UUID "0A96"  ///< UUID for calibration status (phase 0-5).
 #define SOLID_COLOR_DEFAULT_VALUE "NO COLOR"  ///< Default value used for the solid color characteristic.
 #define SOLID_COLOR_MAX_LENGTH 8  ///< Maximum length for the solid color characteristic string.
 #define DEFAULT_EFFECT_VALUE 255  ///< Default value used for the effect characteristic (idle state).

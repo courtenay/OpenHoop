@@ -7,7 +7,11 @@
 #include "../../include/effects/CalibrateEffect.h"
 #include "../../include/Config.h"
 #include "../../include/utils/EffectUtils.h"
+#include "../../include/services/BleService.h"
 #include <Arduino_LSM9DS1.h>
+
+// Access the global BLE service to report calibration phase
+extern BleService bleService;
 
 CalibrateEffect::CalibrateEffect()
     : currentPhase(Phase::FLAT)
@@ -26,6 +30,9 @@ void CalibrateEffect::start() {
     stableStartTime = 0;
     stableCycles = 0;
     smoothAx = smoothAy = smoothAz = 0;
+
+    // Report phase 1 to BLE
+    bleService.calibrationCharacteristic.writeValue(1);
 
     DEBUG_PRINTLN("");
     DEBUG_PRINTLN("==========================================");
@@ -114,6 +121,7 @@ void CalibrateEffect::update() {
 
                 currentPhase = Phase::WAIT_MOVE;
                 resetForNextPhase();
+                bleService.calibrationCharacteristic.writeValue(2);
 
                 DEBUG_PRINTLN("");
                 DEBUG_PRINTLN("PHASE 1 COMPLETE - Flat orientation captured");
@@ -146,6 +154,7 @@ void CalibrateEffect::update() {
             if (hasMoved) {
                 currentPhase = Phase::BOTTOM;
                 resetForNextPhase();
+                bleService.calibrationCharacteristic.writeValue(3);
 
                 DEBUG_PRINTLN("");
                 DEBUG_PRINTLN("PHASE 2 COMPLETE - Movement detected");
@@ -192,6 +201,7 @@ void CalibrateEffect::update() {
 
                 currentPhase = Phase::TOP_VERIFY;
                 resetForNextPhase();
+                bleService.calibrationCharacteristic.writeValue(4);
 
                 DEBUG_PRINTLN("");
                 DEBUG_PRINTLN("PHASE 3 COMPLETE - Bottom position captured");
@@ -232,6 +242,7 @@ void CalibrateEffect::update() {
 
             if (stableEnough && isOpposite && stillTilted) {
                 currentPhase = Phase::DONE;
+                bleService.calibrationCharacteristic.writeValue(5);
 
                 DEBUG_PRINTLN("");
                 DEBUG_PRINTLN("==========================================");
@@ -256,5 +267,6 @@ void CalibrateEffect::update() {
 void CalibrateEffect::stop() {
     hoop.fill(0);
     hoop.show();
+    bleService.calibrationCharacteristic.writeValue(0);  // Not calibrating
     DEBUG_PRINTLN("=== Calibration Mode Ended ===");
 }

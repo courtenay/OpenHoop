@@ -30,6 +30,7 @@ BleService::BleService():
         solidColorCharacteristic(SCOLOR_SERVICE_UUID, BLERead | BLEWrite, SOLID_COLOR_VALUE_SIZE),
         energySavingModeCharacteristic(ENERGY_SERVICE_UUID, BLERead | BLEWrite),
         imuCharacteristic(IMU_SERVICE_UUID, BLERead | BLENotify, 12),
+        calibrationCharacteristic(CALIBRATION_SERVICE_UUID, BLERead | BLENotify),
         hulaHoopService("1812"),
         reportDescriptor("2908", "04 0B 00 0B 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00"),
         reportMapCharacteristic("2A4B", BLERead | BLENotify),
@@ -76,6 +77,8 @@ bool BleService::beginAndAdvertise() {
     hulaHoopControlService.addCharacteristic(energySavingModeCharacteristic);
     energySavingModeCharacteristic.writeValue(DEFAULT_ENERGY_SAVING_MODE);
     hulaHoopControlService.addCharacteristic(imuCharacteristic);
+    hulaHoopControlService.addCharacteristic(calibrationCharacteristic);
+    calibrationCharacteristic.writeValue(0);  // 0 = not calibrating
     deviceInformationService.addCharacteristic(pnpIdCharacteristic);
     deviceInformationService.addCharacteristic(manufacturerCharacteristic);
     deviceInformationService.addCharacteristic(modelCharacteristic);

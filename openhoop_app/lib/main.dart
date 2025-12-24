@@ -33,6 +33,7 @@ class BleUuids {
   static final color = Guid('00000a93-0000-1000-8000-00805f9b34fb');
   static final imu = Guid('00000a94-0000-1000-8000-00805f9b34fb');
   static final energy = Guid('00000a95-0000-1000-8000-00805f9b34fb');
+  static final calibration = Guid('00000a96-0000-1000-8000-00805f9b34fb');
   static final batteryService = Guid('0000180f-0000-1000-8000-00805f9b34fb');
   static final batteryLevel = Guid('00002a19-0000-1000-8000-00805f9b34fb');
 }
@@ -63,11 +64,14 @@ class _HoopControllerState extends State<HoopController> {
   BluetoothCharacteristic? _energyChar;
   BluetoothCharacteristic? _batteryChar;
   BluetoothCharacteristic? _imuChar;
+  BluetoothCharacteristic? _calibrationChar;
   StreamSubscription? _imuSubscription;
+  StreamSubscription? _calibrationSubscription;
 
   bool _isConnected = false;
   bool _isScanning = false;
   bool _isCalibrating = false;
+  int _calibrationPhase = 0;  // 0=inactive, 1-5=phases
   int _batteryLevel = -1;
   int _brightnessLevel = 4; // Default 50%
   String _status = 'Disconnected';
@@ -204,14 +208,18 @@ class _HoopControllerState extends State<HoopController> {
       device.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
           _imuSubscription?.cancel();
+          _calibrationSubscription?.cancel();
           setState(() {
             _isConnected = false;
+            _isCalibrating = false;
+            _calibrationPhase = 0;
             _status = 'Disconnected';
             _effectChar = null;
             _colorChar = null;
             _energyChar = null;
             _batteryChar = null;
             _imuChar = null;
+            _calibrationChar = null;
           });
         }
       });
@@ -231,6 +239,12 @@ class _HoopControllerState extends State<HoopController> {
               // Subscribe to IMU notifications
               await char.setNotifyValue(true);
               _imuSubscription = char.onValueReceived.listen(_onImuData);
+            }
+            if (char.uuid == BleUuids.calibration) {
+              _calibrationChar = char;
+              // Subscribe to calibration phase notifications
+              await char.setNotifyValue(true);
+              _calibrationSubscription = char.onValueReceived.listen(_onCalibrationData);
             }
           }
         }
@@ -293,11 +307,26 @@ class _HoopControllerState extends State<HoopController> {
     });
   }
 
+  void _onCalibrationData(List<int> data) {
+    if (data.isEmpty) return;
+    final phase = data[0];
+    setState(() {
+      _calibrationPhase = phase;
+      // Auto-close calibration sheet when done (phase 5) or cancelled (phase 0)
+      if (phase == 0 && _isCalibrating) {
+        _isCalibrating = false;
+      }
+    });
+  }
+
   Future<void> _disconnect() async {
     _imuSubscription?.cancel();
+    _calibrationSubscription?.cancel();
     await _device?.disconnect();
     setState(() {
       _isConnected = false;
+      _isCalibrating = false;
+      _calibrationPhase = 0;
       _status = 'Disconnected';
     });
   }
@@ -328,145 +357,22 @@ class _HoopControllerState extends State<HoopController> {
       context: context,
       backgroundColor: const Color(0xFF1A1A2E),
       isScrollControlled: true,
-      builder: (context) => _buildCalibrationSheet(),
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) => _CalibrationSheet(
+        getPhase: () => _calibrationPhase,
+        calibrationSubscription: _calibrationChar?.onValueReceived,
+        onClose: () {
+          Navigator.pop(context);
+          // Send a different effect to stop calibration if not done
+          if (_calibrationPhase != 5) {
+            _sendEffect(1); // Switch to Rainbow to exit calibration
+          }
+        },
+      ),
     ).whenComplete(() {
       setState(() => _isCalibrating = false);
     });
-  }
-
-  Widget _buildCalibrationSheet() {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (context, scrollController) => SingleChildScrollView(
-        controller: scrollController,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const Text(
-              'Calibration',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Follow the LED colors on your hoop:',
-              style: TextStyle(fontSize: 14, color: Colors.white70),
-            ),
-            const SizedBox(height: 24),
-            _buildCalibrationStep(
-              color: Colors.cyan,
-              step: '1',
-              title: 'Lay Flat',
-              description: 'Place the hoop flat on the ground and hold still.',
-            ),
-            _buildCalibrationStep(
-              color: Colors.yellow,
-              step: '2',
-              title: 'Pick It Up',
-              description: 'Lift and tilt the hoop at least 45° from flat.',
-            ),
-            _buildCalibrationStep(
-              color: Colors.purple,
-              step: '3',
-              title: 'Arduino at Bottom',
-              description: 'Rotate so the Arduino/battery is at the bottom (6 o\'clock). Tilt at least 66° from horizontal.',
-            ),
-            _buildCalibrationStep(
-              color: Colors.blue,
-              step: '4',
-              title: 'Arduino at Top',
-              description: 'Flip the hoop so Arduino is at the top (12 o\'clock). Hold still.',
-            ),
-            _buildCalibrationStep(
-              color: Colors.green,
-              step: '✓',
-              title: 'Done!',
-              description: 'Calibration saved. Your hoop will return to normal effects.',
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white10,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text('Close'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCalibrationStep({
-    required Color color,
-    required String step,
-    required String title,
-    required String description,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Center(
-              child: Text(
-                step,
-                style: TextStyle(
-                  color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: const TextStyle(fontSize: 14, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildColorPreview(List<Color> colors) {
@@ -820,4 +726,189 @@ class HoopPainter extends CustomPainter {
   bool shouldRepaint(HoopPainter oldDelegate) {
     return oldDelegate.pitch != pitch || oldDelegate.roll != roll || oldDelegate.yaw != yaw;
   }
+}
+
+// Calibration sheet that updates live based on BLE phase notifications
+class _CalibrationSheet extends StatefulWidget {
+  final int Function() getPhase;
+  final Stream<List<int>>? calibrationSubscription;
+  final VoidCallback onClose;
+
+  const _CalibrationSheet({
+    required this.getPhase,
+    required this.calibrationSubscription,
+    required this.onClose,
+  });
+
+  @override
+  State<_CalibrationSheet> createState() => _CalibrationSheetState();
+}
+
+class _CalibrationSheetState extends State<_CalibrationSheet> {
+  int _phase = 1;
+  StreamSubscription? _subscription;
+
+  static const _steps = [
+    _CalibrationStepData(1, Colors.cyan, 'Lay Flat', 'Place the hoop flat on the ground and hold still.'),
+    _CalibrationStepData(2, Colors.yellow, 'Pick It Up', 'Lift and tilt the hoop at least 45° from flat.'),
+    _CalibrationStepData(3, Colors.purple, 'Arduino at Bottom', 'Rotate so the Arduino/battery is at the bottom (6 o\'clock). Tilt the hoop plane vertically.'),
+    _CalibrationStepData(4, Colors.blue, 'Arduino at Top', 'Flip the hoop so Arduino is at the top (12 o\'clock). Hold still.'),
+    _CalibrationStepData(5, Colors.green, 'Done!', 'Calibration complete! Your hoop is now calibrated.'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _phase = widget.getPhase();
+    if (_phase == 0) _phase = 1; // Default to phase 1 if not started
+
+    // Listen for phase changes
+    _subscription = widget.calibrationSubscription?.listen((data) {
+      if (data.isNotEmpty && mounted) {
+        setState(() {
+          _phase = data[0];
+          if (_phase == 0) _phase = 1;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentStep = _steps.firstWhere(
+      (s) => s.phase == _phase,
+      orElse: () => _steps.first,
+    );
+    final isDone = _phase == 5;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Progress indicator
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final stepPhase = i + 1;
+              final isActive = stepPhase == _phase;
+              final isComplete = stepPhase < _phase;
+              return Container(
+                width: isActive ? 12 : 8,
+                height: isActive ? 12 : 8,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isComplete
+                    ? Colors.green
+                    : isActive
+                      ? _steps[i].color
+                      : Colors.white24,
+                ),
+              );
+            }),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Current step - large and prominent
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: currentStep.color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: currentStep.color, width: 2),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: currentStep.color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: isDone
+                      ? const Icon(Icons.check, size: 36, color: Colors.white)
+                      : Text(
+                          '$_phase',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: currentStep.color.computeLuminance() > 0.5
+                              ? Colors.black
+                              : Colors.white,
+                          ),
+                        ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  currentStep.title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  currentStep.description,
+                  style: const TextStyle(fontSize: 16, color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Close/Done button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: widget.onClose,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDone ? Colors.green : Colors.white10,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Text(isDone ? 'Done' : 'Cancel'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalibrationStepData {
+  final int phase;
+  final Color color;
+  final String title;
+  final String description;
+
+  const _CalibrationStepData(this.phase, this.color, this.title, this.description);
 }

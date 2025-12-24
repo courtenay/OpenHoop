@@ -50,6 +50,7 @@ public:
     BLEStringCharacteristic solidColorCharacteristic;  ///< Solid color characteristic for BLE.
     BLEByteCharacteristic energySavingModeCharacteristic;  ///< Energy-saving mode characteristic.
     BLECharacteristic imuCharacteristic;  ///< IMU data stream characteristic (12 bytes: 6 x int16).
+    BLEByteCharacteristic calibrationCharacteristic;  ///< Calibration phase (0=inactive, 1-5=phases).
 
     /**
      * @brief Resets controllable characteristics to their default values.
