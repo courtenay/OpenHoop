@@ -67,6 +67,7 @@ class _HoopControllerState extends State<HoopController> {
 
   bool _isConnected = false;
   bool _isScanning = false;
+  bool _isCalibrating = false;
   int _batteryLevel = -1;
   int _brightnessLevel = 4; // Default 50%
   String _status = 'Disconnected';
@@ -320,6 +321,154 @@ class _HoopControllerState extends State<HoopController> {
     }
   }
 
+  void _startCalibration() {
+    _sendEffect(96);
+    setState(() => _isCalibrating = true);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A2E),
+      isScrollControlled: true,
+      builder: (context) => _buildCalibrationSheet(),
+    ).whenComplete(() {
+      setState(() => _isCalibrating = false);
+    });
+  }
+
+  Widget _buildCalibrationSheet() {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) => SingleChildScrollView(
+        controller: scrollController,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Text(
+              'Calibration',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Follow the LED colors on your hoop:',
+              style: TextStyle(fontSize: 14, color: Colors.white70),
+            ),
+            const SizedBox(height: 24),
+            _buildCalibrationStep(
+              color: Colors.cyan,
+              step: '1',
+              title: 'Lay Flat',
+              description: 'Place the hoop flat on the ground and hold still.',
+            ),
+            _buildCalibrationStep(
+              color: Colors.yellow,
+              step: '2',
+              title: 'Pick It Up',
+              description: 'Lift and tilt the hoop at least 45° from flat.',
+            ),
+            _buildCalibrationStep(
+              color: Colors.purple,
+              step: '3',
+              title: 'Arduino at Bottom',
+              description: 'Rotate so the Arduino/battery is at the bottom (6 o\'clock). Tilt at least 66° from horizontal.',
+            ),
+            _buildCalibrationStep(
+              color: Colors.blue,
+              step: '4',
+              title: 'Arduino at Top',
+              description: 'Flip the hoop so Arduino is at the top (12 o\'clock). Hold still.',
+            ),
+            _buildCalibrationStep(
+              color: Colors.green,
+              step: '✓',
+              title: 'Done!',
+              description: 'Calibration saved. Your hoop will return to normal effects.',
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white10,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Close'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalibrationStep({
+    required Color color,
+    required String step,
+    required String title,
+    required String description,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Center(
+              child: Text(
+                step,
+                style: TextStyle(
+                  color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildColorPreview(List<Color> colors) {
     return Container(
       height: 8,
@@ -517,7 +666,7 @@ class _HoopControllerState extends State<HoopController> {
                               backgroundColor: Colors.teal[700],
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
-                            onPressed: () => _sendEffect(96),
+                            onPressed: _startCalibration,
                           ),
                         ],
                       ],
