@@ -150,15 +150,15 @@ void setup() {
     } else {
         // Check magnetometer - may need a moment after IMU.begin()
         DEBUG_PRINT("Magnetometer sample rate: ");
-        DEBUG_PRINT(IMU.magneticFieldSampleRate());
+        DEBUG_PRINT(IMU.getMagnetODR());
         DEBUG_PRINTLN(" Hz");
 
         // Wait for magnetometer data (up to 500ms)
         float mx, my, mz;
         bool magAvailable = false;
         for (int i = 0; i < 50; i++) {
-            if (IMU.magneticFieldAvailable()) {
-                if (IMU.readMagneticField(mx, my, mz)) {
+            if (IMU.magnetAvailable()) {
+                if (IMU.readMagnet(mx, my, mz)) {
                     magAvailable = true;
                     break;
                 }
@@ -189,7 +189,7 @@ void setup() {
         int validSamples = 0;
         for (int i = 0; i < kCalibrationSamples; i++) {
             float gx, gy, gz;
-            if (IMU.gyroscopeAvailable() && IMU.readGyroscope(gx, gy, gz)) {
+            if (IMU.gyroAvailable() && IMU.readGyro(gx, gy, gz)) {
                 sumGx += gx;
                 sumGy += gy;
                 sumGz += gz;
@@ -412,9 +412,9 @@ void updateIMU() {
     lastIMUUpdateMs = now;
 
     float ax, ay, az, gx, gy, gz, mx, my, mz;
-    if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
-        IMU.readAcceleration(ax, ay, az);
-        IMU.readGyroscope(gx, gy, gz);
+    if (IMU.accelAvailable() && IMU.gyroAvailable()) {
+        IMU.readAccel(ax, ay, az);
+        IMU.readGyro(gx, gy, gz);
 
         // Subtract gyro bias (calibrated at startup)
         if (gyroCalibrated) {
@@ -443,7 +443,7 @@ void updateIMU() {
         float gzRad = gz * DEG_TO_RAD;
 
         // Update Madgwick filter - use magnetometer if available for stable yaw
-        if (IMU.magneticFieldAvailable() && IMU.readMagneticField(mx, my, mz)) {
+        if (IMU.magnetAvailable() && IMU.readMagnet(mx, my, mz)) {
             // 9-DOF mode: accel + gyro + magnetometer (no yaw drift!)
             madgwick.update(gxRad, gyRad, gzRad, ax, ay, az, mx, my, mz);
         } else {

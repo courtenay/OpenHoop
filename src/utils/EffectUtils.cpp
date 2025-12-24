@@ -150,7 +150,7 @@ void EffectUtils::calibrateIMU() {
     DEBUG_PRINTLN("Collecting IMU baseline samples...");
 
     for (int i = 0; i < samples; i++) {
-        if (IMU.readAcceleration(x, y, z)) {
+        if (IMU.readAccel(x, y, z)) {
             sumX += x;
             sumY += y;
             sumZ += z;
@@ -211,7 +211,7 @@ void EffectUtils::calibrateLEDOffset() {
     DEBUG_PRINTLN("Collecting LED offset samples...");
 
     for (int i = 0; i < samples; i++) {
-        if (IMU.readAcceleration(x, y, z)) {
+        if (IMU.readAccel(x, y, z)) {
             sumX += x;
             sumY += y;
             sumZ += z;
@@ -350,7 +350,7 @@ bool EffectUtils::loadCalibration() {
 float EffectUtils::getBottomAngle() {
     float x, y, z;
 
-    if (!IMU.accelerationAvailable() || !IMU.readAcceleration(x, y, z)) {
+    if (!IMU.accelAvailable() || !IMU.readAccel(x, y, z)) {
         return 0.0f;
     }
 
@@ -444,7 +444,7 @@ float EffectUtils::getInclination() {
     float x, y, z;
 
     // Read accelerometer values (measures gravity for tilt detection)
-    if (!IMU.readAcceleration(x, y, z)) {
+    if (!IMU.readAccel(x, y, z)) {
         return 0.0f;  // Return 0 if read fails
     }
 

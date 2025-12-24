@@ -29,7 +29,7 @@ void CompassEffect::update() {
 
     // Only read magnetometer when new data is available
     // Keep using last heading if no new data (don't flash error)
-    if (IMU.magneticFieldAvailable() && IMU.readMagneticField(mx, my, mz)) {
+    if (IMU.magnetAvailable() && IMU.readMagnet(mx, my, mz)) {
         // Calculate heading from magnetometer (assuming hoop is roughly level)
         // atan2(my, mx) gives heading in radians
         float heading = atan2(my, mx);  // radians

@@ -65,7 +65,7 @@ float CalibrateEffect::calcCosAngle(float ax1, float ay1, float az1, float ax2, 
 void CalibrateEffect::update() {
     float ax, ay, az;
 
-    if (!IMU.readAcceleration(ax, ay, az)) {
+    if (!IMU.readAccel(ax, ay, az)) {
         hoop.fill(HulaHoopDotStar::Color(255, 0, 0));
         hoop.show();
         return;

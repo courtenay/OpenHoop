@@ -49,7 +49,7 @@ void POVEffect::updateRotation() {
     } else {
         // Real mode: use gyroscope Y-axis (hoop spins around vertical Y axis)
         float gx, gy, gz;
-        if (IMU.readGyroscope(gx, gy, gz)) {
+        if (IMU.readGyro(gx, gy, gz)) {
             // Y axis is vertical (calibrated), so gy measures hoop spin
             // Integrate angular velocity to get position
             currentAngle += gy * dt;
