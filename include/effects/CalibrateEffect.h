@@ -31,16 +31,27 @@ public:
     void stop() override;
 
 private:
-    enum class Phase { FLAT, LED_OFFSET, DONE };
+    enum class Phase { FLAT, WAIT_MOVE, BOTTOM, TOP_VERIFY, DONE };
     Phase currentPhase;
     unsigned long phaseStartTime;
     unsigned long lastPrintTime;
     unsigned long stableStartTime;
-    bool isStable;
+    int stableCycles;  // Count of consecutive stable readings
 
-    static constexpr float STABILITY_THRESHOLD = 0.15f;  // Max allowed acceleration change
-    static constexpr unsigned long STABLE_DURATION_MS = 500;  // Must be stable for 0.5 seconds
-    static constexpr float TILT_THRESHOLD = 0.7f;  // Min tilt to detect vertical position
+    // Smoothed accelerometer values
+    float smoothAx, smoothAy, smoothAz;
+
+    // Captured orientations for comparison
+    float flatAx, flatAy, flatAz;
+    float bottomAx, bottomAy, bottomAz;
+
+    static constexpr float STABILITY_THRESHOLD = 0.08f;  // Max allowed acceleration change per reading
+    static constexpr int STABLE_CYCLES_REQUIRED = 15;    // Need 15 stable readings (~0.5s at 30fps)
+    static constexpr float SMOOTHING = 0.3f;             // Smoothing factor for accel
+    static constexpr float TILT_COS_THRESHOLD = 0.4f;    // cos(66°) - must tilt at least 66°
+
+    float calcCosAngle(float ax1, float ay1, float az1, float ax2, float ay2, float az2);
+    void resetForNextPhase();
 };
 
 #endif //OPENHOOP_CALIBRATEEFFECT_H

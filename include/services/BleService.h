@@ -40,11 +40,11 @@ public:
     void updateBatteryLevel(float voltage);
 
     /**
-     * @brief Updates the IMU data characteristic with current sensor values.
-     * @param ax, ay, az - Accelerometer values in g
-     * @param gx, gy, gz - Gyroscope values in deg/s
+     * @brief Updates the IMU data characteristic with filtered orientation and raw accelerometer.
+     * @param roll, pitch, yaw - Euler angles in degrees from Madgwick filter
+     * @param ax, ay, az - Raw accelerometer values in g (for effects)
      */
-    void updateIMUData(float ax, float ay, float az, float gx, float gy, float gz);
+    void updateIMUData(float roll, float pitch, float yaw, float ax, float ay, float az);
 
     BLEByteCharacteristic effectCharacteristic;  ///< Effect characteristic for BLE.
     BLEStringCharacteristic solidColorCharacteristic;  ///< Solid color characteristic for BLE.

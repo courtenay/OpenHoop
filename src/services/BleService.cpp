@@ -130,17 +130,17 @@ void BleService::resetControlCharacteristics() {
     energySavingModeCharacteristic.writeValue(DEFAULT_ENERGY_SAVING_MODE);
 }
 
-void BleService::updateIMUData(float ax, float ay, float az, float gx, float gy, float gz) {
-    // Pack IMU data as 6 x int16 (12 bytes total)
+void BleService::updateIMUData(float roll, float pitch, float yaw, float ax, float ay, float az) {
+    // Pack filtered orientation + raw accel as 6 x int16 (12 bytes total)
+    // Orientation: scaled by 100 (180.0° = 18000)
     // Accelerometer: scaled by 1000 (1.0g = 1000)
-    // Gyroscope: scaled by 10 (100 deg/s = 1000)
     int16_t data[6];
-    data[0] = static_cast<int16_t>(ax * 1000.0f);
-    data[1] = static_cast<int16_t>(ay * 1000.0f);
-    data[2] = static_cast<int16_t>(az * 1000.0f);
-    data[3] = static_cast<int16_t>(gx * 10.0f);
-    data[4] = static_cast<int16_t>(gy * 10.0f);
-    data[5] = static_cast<int16_t>(gz * 10.0f);
+    data[0] = static_cast<int16_t>(roll * 100.0f);   // Roll in degrees * 100
+    data[1] = static_cast<int16_t>(pitch * 100.0f);  // Pitch in degrees * 100
+    data[2] = static_cast<int16_t>(yaw * 100.0f);    // Yaw in degrees * 100
+    data[3] = static_cast<int16_t>(ax * 1000.0f);    // Accel X in g * 1000
+    data[4] = static_cast<int16_t>(ay * 1000.0f);    // Accel Y in g * 1000
+    data[5] = static_cast<int16_t>(az * 1000.0f);    // Accel Z in g * 1000
 
     imuCharacteristic.writeValue(reinterpret_cast<uint8_t*>(data), 12);
 }

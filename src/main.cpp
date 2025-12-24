@@ -15,6 +15,7 @@
 
 #ifdef FEATURE_IMU
 #include <Arduino_LSM9DS1.h>
+#include "../include/utils/MadgwickFilter.h"
 #endif
 
 #include "../include/services/BleService.h"
@@ -40,6 +41,7 @@ unsigned long lastBleActivityMs = 0;
 unsigned long lastEffectUpdateMs = 0;
 #ifdef FEATURE_IMU
 unsigned long lastIMUUpdateMs = 0;
+MadgwickFilter madgwick(50.0f);  // 50Hz sample rate (matches kIMUUpdateIntervalMs = 20ms)
 #endif
 bool isCentralConnected = false;
 bool inactivityDimmed = false;
@@ -340,7 +342,23 @@ void updateIMU() {
     if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
         IMU.readAcceleration(ax, ay, az);
         IMU.readGyroscope(gx, gy, gz);
-        bleService.updateIMUData(ax, ay, az, gx, gy, gz);
+
+        // Convert gyro from deg/s to rad/s for Madgwick
+        float gxRad = gx * DEG_TO_RAD;
+        float gyRad = gy * DEG_TO_RAD;
+        float gzRad = gz * DEG_TO_RAD;
+
+        // Update Madgwick filter
+        madgwick.update(gxRad, gyRad, gzRad, ax, ay, az);
+
+        // Send filtered orientation via BLE
+        // Pack: roll, pitch, yaw (as int16 * 100 for precision) + raw accel for effects
+        bleService.updateIMUData(
+            madgwick.getRoll(),
+            madgwick.getPitch(),
+            madgwick.getYaw(),
+            ax, ay, az
+        );
     }
 }
 #endif
