@@ -5,6 +5,7 @@
  */
 
 #include "../../include/utils/MadgwickFilter.h"
+#include <cstring>
 
 MadgwickFilter::MadgwickFilter(float sampleFreq)
     : q0(1.0f), q1(0.0f), q2(0.0f), q3(0.0f)
@@ -25,12 +26,13 @@ void MadgwickFilter::reset() {
 }
 
 float MadgwickFilter::invSqrt(float x) {
-    // Fast inverse square root approximation
+    // Fast inverse square root approximation (Quake III style)
     float halfx = 0.5f * x;
     float y = x;
-    long i = *(long*)&y;
+    long i;
+    memcpy(&i, &y, sizeof(i));
     i = 0x5f3759df - (i >> 1);
-    y = *(float*)&i;
+    memcpy(&y, &i, sizeof(y));
     y = y * (1.5f - (halfx * y * y));  // Newton iteration
     y = y * (1.5f - (halfx * y * y));  // Second iteration for accuracy
     return y;
@@ -163,6 +165,10 @@ void MadgwickFilter::update(float gx, float gy, float gz,
         q2q3 = q2 * q3;
         q3q3 = q3 * q3;
 
+        // Pre-compute quaternion products for gradient descent
+        float _2q0q2 = 2.0f * q0 * q2;
+        float _2q2q3 = 2.0f * q2 * q3;
+
         // Reference direction of Earth's magnetic field
         hx = mx * q0q0 - _2q0my * q3 + _2q0mz * q2 + mx * q1q1 + _2q1 * my * q2 + _2q1 * mz * q3 - mx * q2q2 - mx * q3q3;
         hy = _2q0mx * q3 + my * q0q0 - _2q0mz * q1 + _2q1mx * q2 - my * q1q1 + my * q2q2 + _2q2 * mz * q3 - my * q3q3;
@@ -204,10 +210,6 @@ void MadgwickFilter::update(float gx, float gy, float gz,
     q2 *= recipNorm;
     q3 *= recipNorm;
 }
-
-// Helper macro for quaternion products used in MARG update
-#define _2q0q2 (2.0f * q0 * q2)
-#define _2q2q3 (2.0f * q2 * q3)
 
 float MadgwickFilter::getRoll() const {
     // Roll (x-axis rotation)
