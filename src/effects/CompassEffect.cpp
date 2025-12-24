@@ -27,32 +27,26 @@ void CompassEffect::start() {
 void CompassEffect::update() {
     float mx, my, mz;
 
-    // Read magnetometer
-    if (!IMU.magneticFieldAvailable() || !IMU.readMagneticField(mx, my, mz)) {
-        // No magnetometer - show error pattern (red flash)
-        static bool toggle = false;
-        toggle = !toggle;
-        hoop.fill(toggle ? HulaHoopDotStar::Color(50, 0, 0) : 0);
-        hoop.show();
-        return;
+    // Only read magnetometer when new data is available
+    // Keep using last heading if no new data (don't flash error)
+    if (IMU.magneticFieldAvailable() && IMU.readMagneticField(mx, my, mz)) {
+        // Calculate heading from magnetometer (assuming hoop is roughly level)
+        // atan2(my, mx) gives heading in radians
+        float heading = atan2(my, mx);  // radians
+
+        // Convert to degrees (0-360)
+        float headingDeg = heading * RAD_TO_DEG;
+        if (headingDeg < 0) headingDeg += 360.0f;
+
+        // Circular interpolation using sin/cos to avoid discontinuity
+        float targetRad = headingDeg * DEG_TO_RAD;
+        float targetSin = sin(targetRad);
+        float targetCos = cos(targetRad);
+
+        smoothedSin += (targetSin - smoothedSin) * SMOOTHING_FACTOR;
+        smoothedCos += (targetCos - smoothedCos) * SMOOTHING_FACTOR;
     }
-
-    // Calculate heading from magnetometer (assuming hoop is roughly level)
-    // atan2(my, mx) gives heading in radians, 0 = magnetic east, increases CCW
-    // We want 0 = north, so adjust
-    float heading = atan2(my, mx);  // radians
-
-    // Convert to degrees (0-360)
-    float headingDeg = heading * RAD_TO_DEG;
-    if (headingDeg < 0) headingDeg += 360.0f;
-
-    // Circular interpolation using sin/cos to avoid discontinuity
-    float targetRad = headingDeg * DEG_TO_RAD;
-    float targetSin = sin(targetRad);
-    float targetCos = cos(targetRad);
-
-    smoothedSin += (targetSin - smoothedSin) * SMOOTHING_FACTOR;
-    smoothedCos += (targetCos - smoothedCos) * SMOOTHING_FACTOR;
+    // If no new data, just keep using the current smoothed values
 
     smoothedAngle = atan2(smoothedSin, smoothedCos) * RAD_TO_DEG;
     if (smoothedAngle < 0) smoothedAngle += 360.0f;
