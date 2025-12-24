@@ -37,7 +37,8 @@ enum class EffectType {
     SOUND_FIRE = 89,
     SOUND_WAVES = 90,
     SOUND_RAINBOW = 91,
-    // Special effects (95-99)
+    // Special effects (94-99)
+    COMPASS = 94,        // Magnetometer compass pointing to magnetic north
     WATER = 95,
     CALIBRATE = 96,      // Two-phase calibration: flat baseline + LED offset
     POV = 97,

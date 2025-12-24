@@ -67,10 +67,10 @@ constexpr bool isValidEffect(uint8_t effectValue) {
     // 0-7: Standard effects (NO_EFFECT through MUSHROOM)
     // 80-86: Pattern presets
     // 87-91: Sound-reactive patterns
-    // 95-99: Special effects (WATER, CALIBRATE, POV, PULSE, SPECTRUM)
+    // 94-99: Special effects (COMPASS, WATER, CALIBRATE, POV, PULSE, SPECTRUM)
     return (effectValue <= static_cast<uint8_t>(EffectType::MUSHROOM)) ||
            (effectValue >= 80 && effectValue <= 91) ||
-           (effectValue >= 95 && effectValue <= 99);
+           (effectValue >= 94 && effectValue <= 99);
 }
 
 uint8_t clampEnergySavingLevel(uint8_t level) {

@@ -25,6 +25,7 @@
 #ifdef FEATURE_IMU
 #include "../../include/effects/CalibrateEffect.h"
 #include "../../include/effects/WaterEffect.h"
+#include "../../include/effects/CompassEffect.h"
 #endif
 #include "../../include/Config.h"
 
@@ -101,6 +102,9 @@ void EffectService::dispatchEffectCommand(EffectType gesture) {
             break;
         case EffectType::WATER:
             setEffect(std::make_unique<WaterEffect>());
+            break;
+        case EffectType::COMPASS:
+            setEffect(std::make_unique<CompassEffect>());
             break;
 #endif
         // Pattern presets

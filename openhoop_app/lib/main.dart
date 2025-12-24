@@ -117,8 +117,9 @@ class _HoopControllerState extends State<HoopController> {
     EffectDef('Sound Rainbow', 91, [hexColor(0xFF0000), hexColor(0xFF8800), hexColor(0xFFFF00), hexColor(0x00FF00), hexColor(0x00FFFF), hexColor(0x0000FF), hexColor(0xFF00FF)]),
   ];
 
-  // Special effects (95-99)
+  // Special effects (94-99)
   static final specialEffects = [
+    EffectDef('Compass', 94, [hexColor(0xFF3300), hexColor(0xFF6600), hexColor(0xFFAA00), hexColor(0x0044AA)]),
     EffectDef('Water', 95, [hexColor(0x0044AA), hexColor(0x0088FF), hexColor(0x00CCFF), hexColor(0xFFFFFF)]),
     EffectDef('Spectrum', 99, [hexColor(0xFF0000), hexColor(0x00FF00), hexColor(0x0000FF)]),
   ];
