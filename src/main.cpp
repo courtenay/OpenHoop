@@ -148,6 +148,23 @@ void setup() {
     if (!imuOk) {
         DEBUG_PRINTLN("WARNING: IMU failed to initialize! Motion effects won't work.");
     } else {
+        // Check magnetometer availability
+        float mx, my, mz;
+        if (IMU.magneticFieldAvailable() && IMU.readMagneticField(mx, my, mz)) {
+            DEBUG_PRINTLN("Magnetometer available - 9-DOF mode enabled");
+            DEBUG_PRINT("Initial mag: X=");
+            DEBUG_PRINT(mx, 1);
+            DEBUG_PRINT(" Y=");
+            DEBUG_PRINT(my, 1);
+            DEBUG_PRINT(" Z=");
+            DEBUG_PRINTLN(mz, 1);
+            // Increase beta for better stability with magnetometer
+            madgwick.setBeta(0.2f);  // Higher beta = faster convergence, more stable
+        } else {
+            DEBUG_PRINTLN("WARNING: Magnetometer not available - yaw will drift!");
+            madgwick.setBeta(0.1f);  // Lower beta for 6-DOF mode
+        }
+
         // Calibrate gyro bias (device should be stationary during startup)
         DEBUG_PRINTLN("Calibrating gyro bias (keep still)...");
         constexpr int kCalibrationSamples = 100;
@@ -364,6 +381,9 @@ void enterDeepSleep() {
 }
 
 #ifdef FEATURE_IMU
+// Stationary detection threshold (deg/s after bias removal)
+constexpr float kStationaryGyroThreshold = 2.0f;
+
 void updateIMU() {
     const unsigned long now = millis();
     if ((now - lastIMUUpdateMs) < kIMUUpdateIntervalMs) {
@@ -381,6 +401,14 @@ void updateIMU() {
             gx -= gyroBiasX;
             gy -= gyroBiasY;
             gz -= gyroBiasZ;
+        }
+
+        // Stationary detection: if gyro is nearly zero, we're not rotating
+        // In this case, zero out gyro to let accel/mag fully correct orientation
+        float gyroMagnitude = sqrtf(gx * gx + gy * gy + gz * gz);
+        if (gyroMagnitude < kStationaryGyroThreshold) {
+            // Device is stationary - zero gyro to prevent drift
+            gx = gy = gz = 0.0f;
         }
 
         // Convert gyro from deg/s to rad/s for Madgwick
