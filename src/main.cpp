@@ -148,9 +148,25 @@ void setup() {
     if (!imuOk) {
         DEBUG_PRINTLN("WARNING: IMU failed to initialize! Motion effects won't work.");
     } else {
-        // Check magnetometer availability
+        // Check magnetometer - may need a moment after IMU.begin()
+        DEBUG_PRINT("Magnetometer sample rate: ");
+        DEBUG_PRINT(IMU.magneticFieldSampleRate());
+        DEBUG_PRINTLN(" Hz");
+
+        // Wait for magnetometer data (up to 500ms)
         float mx, my, mz;
-        if (IMU.magneticFieldAvailable() && IMU.readMagneticField(mx, my, mz)) {
+        bool magAvailable = false;
+        for (int i = 0; i < 50; i++) {
+            if (IMU.magneticFieldAvailable()) {
+                if (IMU.readMagneticField(mx, my, mz)) {
+                    magAvailable = true;
+                    break;
+                }
+            }
+            delay(10);
+        }
+
+        if (magAvailable) {
             DEBUG_PRINTLN("Magnetometer available - 9-DOF mode enabled");
             DEBUG_PRINT("Initial mag: X=");
             DEBUG_PRINT(mx, 1);
@@ -162,6 +178,7 @@ void setup() {
             madgwick.setBeta(0.2f);  // Higher beta = faster convergence, more stable
         } else {
             DEBUG_PRINTLN("WARNING: Magnetometer not available - yaw will drift!");
+            DEBUG_PRINTLN("(LSM9DS1 mag uses I2C addr 0x1C, accel/gyro use 0x6A)");
             madgwick.setBeta(0.1f);  // Lower beta for 6-DOF mode
         }
 
