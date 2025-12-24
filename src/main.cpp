@@ -399,7 +399,10 @@ void enterDeepSleep() {
 
 #ifdef FEATURE_IMU
 // Stationary detection threshold (deg/s after bias removal)
-constexpr float kStationaryGyroThreshold = 2.0f;
+constexpr float kStationaryGyroThreshold = 5.0f;  // Increased from 2.0
+constexpr float kStationaryBeta = 0.5f;  // High beta when stationary for fast convergence
+constexpr float kMovingBeta = 0.1f;      // Lower beta when moving for smooth tracking
+bool wasStationary = false;
 
 void updateIMU() {
     const unsigned long now = millis();
@@ -421,12 +424,18 @@ void updateIMU() {
         }
 
         // Stationary detection: if gyro is nearly zero, we're not rotating
-        // In this case, zero out gyro to let accel/mag fully correct orientation
         float gyroMagnitude = sqrtf(gx * gx + gy * gy + gz * gz);
-        if (gyroMagnitude < kStationaryGyroThreshold) {
-            // Device is stationary - zero gyro to prevent drift
+        bool isStationary = gyroMagnitude < kStationaryGyroThreshold;
+
+        if (isStationary) {
+            // Device is stationary - zero gyro and boost beta for instant convergence
             gx = gy = gz = 0.0f;
+            madgwick.setBeta(kStationaryBeta);
+        } else if (wasStationary) {
+            // Just started moving - restore normal beta
+            madgwick.setBeta(kMovingBeta);
         }
+        wasStationary = isStationary;
 
         // Convert gyro from deg/s to rad/s for Madgwick
         float gxRad = gx * DEG_TO_RAD;

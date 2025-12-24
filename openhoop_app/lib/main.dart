@@ -81,7 +81,7 @@ class _HoopControllerState extends State<HoopController> {
   double _accelX = 0, _accelY = 0, _accelZ = 0; // Raw accel for effects
   // Smoothed values for visualization (light smoothing on already-filtered data)
   double _smoothRoll = 0, _smoothPitch = 0, _smoothYaw = 0;
-  static const double _smoothing = 0.3; // Higher since Madgwick already filters
+  static const double _smoothing = 0.15; // Lower = calmer visualization when stationary
 
   // Brightness levels: 0=100%, 1=88%, 2=75%, 3=63%, 4=50%, 5=38%, 6=25%, 7=15%, 8=10%
   static const List<int> brightnessPercents = [100, 88, 75, 63, 50, 38, 25, 15, 10];
