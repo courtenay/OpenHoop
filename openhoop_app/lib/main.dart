@@ -749,7 +749,7 @@ class _CalibrationSheetState extends State<_CalibrationSheet> {
   StreamSubscription? _subscription;
 
   static const _steps = [
-    _CalibrationStepData(1, Colors.cyan, 'Lay Flat', 'Place the hoop flat on the ground and hold still.'),
+    _CalibrationStepData(1, Colors.cyan, 'Lay Flat', 'Place the hoop flat on the ground. Wait 3 seconds, then hold perfectly still for 2 more seconds.'),
     _CalibrationStepData(2, Colors.yellow, 'Pick It Up', 'Lift and tilt the hoop at least 45° from flat.'),
     _CalibrationStepData(3, Colors.purple, 'Arduino at Bottom', 'Rotate so the Arduino/battery is at the bottom (6 o\'clock). Tilt the hoop plane vertically.'),
     _CalibrationStepData(4, Colors.blue, 'Arduino at Top', 'Flip the hoop so Arduino is at the top (12 o\'clock). Hold still.'),

@@ -45,8 +45,10 @@ private:
     float flatAx, flatAy, flatAz;
     float bottomAx, bottomAy, bottomAz;
 
-    static constexpr float STABILITY_THRESHOLD = 0.08f;  // Max allowed acceleration change per reading
-    static constexpr int STABLE_CYCLES_REQUIRED = 15;    // Need 15 stable readings (~0.5s at 30fps)
+    static constexpr float STABILITY_THRESHOLD = 0.05f;  // Max allowed acceleration change per reading
+    static constexpr int STABLE_CYCLES_REQUIRED = 30;    // Need 30 stable readings (~1s at 30fps)
+    static constexpr int FLAT_STABLE_CYCLES = 60;        // Need 60 stable readings (~2s) for FLAT phase
+    static constexpr unsigned long FLAT_GRACE_PERIOD_MS = 3000;  // 3 second grace period to lay hoop down
     static constexpr float SMOOTHING = 0.3f;             // Smoothing factor for accel
     static constexpr float TILT_COS_THRESHOLD = 0.4f;    // cos(66°) - must tilt at least 66°
 

@@ -40,7 +40,9 @@ void CalibrateEffect::start() {
     DEBUG_PRINTLN("==========================================");
     DEBUG_PRINTLN("");
     DEBUG_PRINTLN("PHASE 1/4: Place hoop FLAT on the ground");
-    DEBUG_PRINTLN("          (CYAN pulsing = waiting for stable)");
+    DEBUG_PRINT("          (3 second grace period, then ");
+    DEBUG_PRINT(FLAT_STABLE_CYCLES);
+    DEBUG_PRINTLN(" stable readings needed)");
     DEBUG_PRINTLN("");
 }
 
@@ -106,29 +108,53 @@ void CalibrateEffect::update() {
 
     switch (currentPhase) {
         case Phase::FLAT: {
-            hoop.fill(HulaHoopDotStar::Color(0, brightness, brightness));  // CYAN
+            unsigned long elapsed = now - phaseStartTime;
+            bool inGracePeriod = elapsed < FLAT_GRACE_PERIOD_MS;
 
-            if (stableEnough) {
-                flatAx = smoothAx;
-                flatAy = smoothAy;
-                flatAz = smoothAz;
+            if (inGracePeriod) {
+                // Grace period: slow pulse, dim cyan - time to lay hoop down
+                float slowPulse = (sin(now * 0.002f) + 1.0f) * 0.5f;
+                uint8_t dimBrightness = static_cast<uint8_t>(30 + slowPulse * 50);
+                hoop.fill(HulaHoopDotStar::Color(0, dimBrightness, dimBrightness));
 
-                EffectUtils::calibrateIMU();
+                // Reset stability counter during grace period
+                stableCycles = 0;
 
-                hoop.fill(HulaHoopDotStar::Color(0, 255, 0));
-                hoop.show();
-                delay(500);
+                if (now - lastPrintTime > 500) {
+                    lastPrintTime = now;
+                    DEBUG_PRINT("Grace period: ");
+                    DEBUG_PRINT((FLAT_GRACE_PERIOD_MS - elapsed) / 1000);
+                    DEBUG_PRINTLN("s remaining...");
+                }
+            } else {
+                // After grace period: normal pulse cyan, checking for stability
+                hoop.fill(HulaHoopDotStar::Color(0, brightness, brightness));
 
-                currentPhase = Phase::WAIT_MOVE;
-                resetForNextPhase();
-                bleService.calibrationCharacteristic.writeValue(2);
+                // Use stricter stability requirement for FLAT phase
+                bool flatStableEnough = stableCycles >= FLAT_STABLE_CYCLES;
 
-                DEBUG_PRINTLN("");
-                DEBUG_PRINTLN("PHASE 1 COMPLETE - Flat orientation captured");
-                DEBUG_PRINTLN("");
-                DEBUG_PRINTLN("PHASE 2/4: Now PICK UP the hoop");
-                DEBUG_PRINTLN("          (YELLOW = waiting for movement)");
-                DEBUG_PRINTLN("");
+                if (flatStableEnough) {
+                    flatAx = smoothAx;
+                    flatAy = smoothAy;
+                    flatAz = smoothAz;
+
+                    EffectUtils::calibrateIMU();
+
+                    hoop.fill(HulaHoopDotStar::Color(0, 255, 0));
+                    hoop.show();
+                    delay(500);
+
+                    currentPhase = Phase::WAIT_MOVE;
+                    resetForNextPhase();
+                    bleService.calibrationCharacteristic.writeValue(2);
+
+                    DEBUG_PRINTLN("");
+                    DEBUG_PRINTLN("PHASE 1 COMPLETE - Flat orientation captured");
+                    DEBUG_PRINTLN("");
+                    DEBUG_PRINTLN("PHASE 2/4: Now PICK UP the hoop");
+                    DEBUG_PRINTLN("          (YELLOW = waiting for movement)");
+                    DEBUG_PRINTLN("");
+                }
             }
             break;
         }
