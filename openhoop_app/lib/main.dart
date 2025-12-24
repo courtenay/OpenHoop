@@ -285,6 +285,32 @@ class _HoopControllerState extends State<HoopController> {
     }
   }
 
+  /// Smoothly interpolate angles handling ±180° wrap-around
+  /// Uses circular interpolation to avoid jumps at the boundary
+  double _smoothAngle(double current, double target, double factor) {
+    // Calculate the shortest angular difference
+    double diff = target - current;
+
+    // Handle wrap-around at ±180° (angles range from -180 to 180)
+    if (diff > 180) {
+      diff -= 360;
+    } else if (diff < -180) {
+      diff += 360;
+    }
+
+    // Apply smoothing
+    double result = current + diff * factor;
+
+    // Normalize back to -180 to 180 range
+    if (result > 180) {
+      result -= 360;
+    } else if (result < -180) {
+      result += 360;
+    }
+
+    return result;
+  }
+
   void _onImuData(List<int> data) {
     if (data.length < 12) return;
 
@@ -300,10 +326,10 @@ class _HoopControllerState extends State<HoopController> {
       _accelY = bytes.getInt16(8, Endian.little) / 1000.0;  // g
       _accelZ = bytes.getInt16(10, Endian.little) / 1000.0; // g
 
-      // Light smoothing for visualization (Madgwick output is already stable)
-      _smoothRoll += (_roll - _smoothRoll) * _smoothing;
-      _smoothPitch += (_pitch - _smoothPitch) * _smoothing;
-      _smoothYaw += (_yaw - _smoothYaw) * _smoothing;
+      // Circular smoothing for angles (handles ±180° wrap-around correctly)
+      _smoothRoll = _smoothAngle(_smoothRoll, _roll, _smoothing);
+      _smoothPitch = _smoothAngle(_smoothPitch, _pitch, _smoothing);
+      _smoothYaw = _smoothAngle(_smoothYaw, _yaw, _smoothing);
     });
   }
 
@@ -312,9 +338,15 @@ class _HoopControllerState extends State<HoopController> {
     final phase = data[0];
     setState(() {
       _calibrationPhase = phase;
-      // Auto-close calibration sheet when done (phase 5) or cancelled (phase 0)
-      if (phase == 0 && _isCalibrating) {
+      // Auto-close calibration sheet when:
+      // - Phase 0: cancelled/stopped
+      // - Phase 6: auto-exit (calibration complete, switching to Water effect)
+      if ((phase == 0 || phase == 6) && _isCalibrating) {
         _isCalibrating = false;
+        // Pop the calibration sheet if it's open
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
       }
     });
   }

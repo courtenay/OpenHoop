@@ -9,11 +9,28 @@
 #include "../../include/Config.h"
 #include "../../include/utils/EffectUtils.h"
 
-WaterEffect::WaterEffect() : smoothedAngle(0), wavePhase(0) {}
+WaterEffect::WaterEffect()
+    : smoothedAngle(0)
+    , wavePhase(0)
+    , bufferIndex(0)
+    , bufferFilled(false)
+    , smoothedSin(0)
+    , smoothedCos(1) {  // cos(0) = 1, sin(0) = 0 for initial angle of 0
+    for (int i = 0; i < ANGLE_BUFFER_SIZE; i++) {
+        angleBuffer[i] = 0;
+    }
+}
 
 void WaterEffect::start() {
     smoothedAngle = 0;
     wavePhase = 0;
+    bufferIndex = 0;
+    bufferFilled = false;
+    smoothedSin = 0;
+    smoothedCos = 1;
+    for (int i = 0; i < ANGLE_BUFFER_SIZE; i++) {
+        angleBuffer[i] = 0;
+    }
     DEBUG_PRINTLN("=== Water Effect Started ===");
     DEBUG_PRINTLN("Simulating water that flows to bottom of hoop");
 }
@@ -22,17 +39,24 @@ void WaterEffect::update() {
     // Get the angle to the bottom of the hoop (handles calibration offset)
     float targetAngle = EffectUtils::getBottomAngle();
 
-    // Smooth the angle to reduce jitter
-    float angleDiff = targetAngle - smoothedAngle;
-    // Handle wrap-around at 180/-180
-    if (angleDiff > 180) angleDiff -= 360;
-    if (angleDiff < -180) angleDiff += 360;
-    smoothedAngle += angleDiff * 0.05f;  // Slower smoothing for calmer motion
+    // Convert target angle to radians for sin/cos interpolation
+    float targetRad = targetAngle * DEG_TO_RAD;
 
-    // Normalize to 0-360
-    float normalizedAngle = smoothedAngle;
-    if (normalizedAngle < 0) normalizedAngle += 360;
-    if (normalizedAngle >= 360) normalizedAngle -= 360;
+    // CIRCULAR INTERPOLATION: Use sin/cos components to avoid 0/360 discontinuity
+    // This is the key to smooth angle transitions - we interpolate in vector space
+    float targetSin = sin(targetRad);
+    float targetCos = cos(targetRad);
+
+    // Exponential smoothing on sin/cos components
+    smoothedSin += (targetSin - smoothedSin) * SMOOTHING_FACTOR;
+    smoothedCos += (targetCos - smoothedCos) * SMOOTHING_FACTOR;
+
+    // Convert back to angle using atan2 (handles all quadrants correctly)
+    smoothedAngle = atan2(smoothedSin, smoothedCos) * RAD_TO_DEG;
+
+    // Normalize to 0-360 using fmod for proper multi-wrap handling
+    float normalizedAngle = fmod(smoothedAngle, 360.0f);
+    if (normalizedAngle < 0) normalizedAngle += 360.0f;
 
     // Apply Arduino-to-LED offset and scale for LED coverage
     float adjustedAngle = normalizedAngle - ARDUINO_LED_OFFSET_DEGREES;

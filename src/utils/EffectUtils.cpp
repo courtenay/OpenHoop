@@ -142,22 +142,31 @@ IMUCalibration EffectUtils::calibration;
 void EffectUtils::calibrateIMU() {
     float x, y, z;
 
-    // Average multiple readings for stability
+    // Average many readings for highly stable baseline
     float sumX = 0, sumY = 0, sumZ = 0;
-    const int samples = 10;
+    const int samples = 50;  // Extended sampling for better accuracy
+    int validSamples = 0;
+
+    DEBUG_PRINTLN("Collecting IMU baseline samples...");
 
     for (int i = 0; i < samples; i++) {
         if (IMU.readAcceleration(x, y, z)) {
             sumX += x;
             sumY += y;
             sumZ += z;
+            validSamples++;
         }
-        delay(10);
+        delay(20);  // 20ms between samples = 1 second total
     }
 
-    calibration.baselineX = sumX / samples;
-    calibration.baselineY = sumY / samples;
-    calibration.baselineZ = sumZ / samples;
+    if (validSamples < samples / 2) {
+        DEBUG_PRINTLN("WARNING: Not enough valid IMU samples!");
+        return;
+    }
+
+    calibration.baselineX = sumX / validSamples;
+    calibration.baselineY = sumY / validSamples;
+    calibration.baselineZ = sumZ / validSamples;
     calibration.isCalibrated = true;
 
     DEBUG_PRINTLN("=== IMU Calibrated ===");
@@ -167,6 +176,10 @@ void EffectUtils::calibrateIMU() {
     DEBUG_PRINT(calibration.baselineY);
     DEBUG_PRINT(" Z: ");
     DEBUG_PRINTLN(calibration.baselineZ);
+    DEBUG_PRINT("Valid samples: ");
+    DEBUG_PRINT(validSamples);
+    DEBUG_PRINT("/");
+    DEBUG_PRINTLN(samples);
 }
 
 /**
@@ -190,22 +203,31 @@ const IMUCalibration& EffectUtils::getCalibration() {
 void EffectUtils::calibrateLEDOffset() {
     float x, y, z;
 
-    // Average multiple readings for stability
+    // Average many readings for highly stable offset
     float sumX = 0, sumY = 0, sumZ = 0;
-    const int samples = 10;
+    const int samples = 50;  // Extended sampling for better accuracy
+    int validSamples = 0;
+
+    DEBUG_PRINTLN("Collecting LED offset samples...");
 
     for (int i = 0; i < samples; i++) {
         if (IMU.readAcceleration(x, y, z)) {
             sumX += x;
             sumY += y;
             sumZ += z;
+            validSamples++;
         }
-        delay(10);
+        delay(20);  // 20ms between samples = 1 second total
     }
 
-    x = sumX / samples;
-    y = sumY / samples;
-    z = sumZ / samples;
+    if (validSamples < samples / 2) {
+        DEBUG_PRINTLN("WARNING: Not enough valid samples for LED offset!");
+        return;
+    }
+
+    x = sumX / validSamples;
+    y = sumY / validSamples;
+    z = sumZ / validSamples;
 
     // Calculate the current gravity angle in the hoop plane
     float angle;

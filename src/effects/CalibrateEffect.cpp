@@ -8,16 +8,19 @@
 #include "../../include/Config.h"
 #include "../../include/utils/EffectUtils.h"
 #include "../../include/services/BleService.h"
+#include "../../include/services/EffectService.h"
 #include <Arduino_LSM9DS1.h>
 
-// Access the global BLE service to report calibration phase
+// Access the global services
 extern BleService bleService;
+extern std::unique_ptr<EffectService> effectService;
 
 CalibrateEffect::CalibrateEffect()
     : currentPhase(Phase::FLAT)
     , phaseStartTime(0)
     , lastPrintTime(0)
     , stableStartTime(0)
+    , doneStartTime(0)
     , stableCycles(0)
     , smoothAx(0), smoothAy(0), smoothAz(0)
     , flatAx(0), flatAy(0), flatAz(0)
@@ -268,6 +271,7 @@ void CalibrateEffect::update() {
 
             if (stableEnough && isOpposite && stillTilted) {
                 currentPhase = Phase::DONE;
+                doneStartTime = now;
                 bleService.calibrationCharacteristic.writeValue(5);
 
                 DEBUG_PRINTLN("");
@@ -275,14 +279,26 @@ void CalibrateEffect::update() {
                 DEBUG_PRINTLN("=== CALIBRATION COMPLETE & VERIFIED! ===");
                 DEBUG_PRINTLN("==========================================");
                 DEBUG_PRINTLN("");
-                DEBUG_PRINTLN("Water effect should now align correctly.");
+                DEBUG_PRINTLN("Switching to Water effect in 2 seconds...");
                 DEBUG_PRINTLN("");
             }
             break;
         }
 
         case Phase::DONE: {
+            // Show celebratory green, then auto-exit to Water effect
             hoop.fill(HulaHoopDotStar::Color(0, 150, 0));  // Solid GREEN
+
+            if (now - doneStartTime >= DONE_DISPLAY_MS) {
+                // Signal completion to BLE and switch to Water effect
+                bleService.calibrationCharacteristic.writeValue(6);  // 6 = auto-exit signal
+                bleService.effectCharacteristic.writeValue(static_cast<uint8_t>(EffectType::WATER));
+                DEBUG_PRINTLN("Auto-switching to Water effect...");
+
+                // Directly switch to Water effect (this will call our stop() method)
+                effectService->dispatchEffectCommand(EffectType::WATER);
+                return;  // Exit early since we're being replaced
+            }
             break;
         }
     }

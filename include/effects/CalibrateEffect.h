@@ -36,6 +36,7 @@ private:
     unsigned long phaseStartTime;
     unsigned long lastPrintTime;
     unsigned long stableStartTime;
+    unsigned long doneStartTime;   // Timer for auto-exit from DONE phase
     int stableCycles;  // Count of consecutive stable readings
 
     // Smoothed accelerometer values
@@ -47,8 +48,9 @@ private:
 
     static constexpr float STABILITY_THRESHOLD = 0.05f;  // Max allowed acceleration change per reading
     static constexpr int STABLE_CYCLES_REQUIRED = 30;    // Need 30 stable readings (~1s at 30fps)
-    static constexpr int FLAT_STABLE_CYCLES = 60;        // Need 60 stable readings (~2s) for FLAT phase
-    static constexpr unsigned long FLAT_GRACE_PERIOD_MS = 3000;  // 3 second grace period to lay hoop down
+    static constexpr int FLAT_STABLE_CYCLES = 100;       // Need 100 stable readings (~3.3s) for FLAT phase
+    static constexpr unsigned long FLAT_GRACE_PERIOD_MS = 4000;  // 4 second grace period to lay hoop down
+    static constexpr unsigned long DONE_DISPLAY_MS = 2000;  // Show green for 2s then auto-exit
     static constexpr float SMOOTHING = 0.3f;             // Smoothing factor for accel
     static constexpr float TILT_COS_THRESHOLD = 0.4f;    // cos(66°) - must tilt at least 66°
 
